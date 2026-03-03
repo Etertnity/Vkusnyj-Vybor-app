@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Вкусный Выбор</string>
+    <string name="nav_restaurants">Рестораны</string>
+    <string name="nav_map">Карта</string>
+    <string name="nav_cart">Корзина</string>
+    <string name="nav_favorites">Избранные</string>
+    <string name="nav_profile">Профиль</string>
+    <string name="main_title">Главное</string>
+    <string name="recent_orders">Последние заказы</string>
+    <string name="main_menu">Основное меню</string>
+    <string name="promotions">Акции</string>
+    <string name="more_items">ещё %d+ позиций</string>
+    <string name="current_offers">актуальные предложения</string>
+    <string name="order_total">Итого</string>
+    <string name="checkout">Оформить заказ</string>
+    <string name="empty_cart">Корзина пуста</string>
+    <string name="add_to_cart">Добавить</string>
+    <string name="your_favorites">Ваши избранные</string>
+    <string name="no_favorites">Нет избранных блюд</string>
+</resources>
