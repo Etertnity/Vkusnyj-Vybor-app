@@ -49,6 +49,9 @@ fun AppNavGraph(navController: NavHostController) {
             HomeScreen(
                 onRestaurantClick = { restaurantId ->
                     navController.navigate(Screen.Restaurant.createRoute(restaurantId))
+                },
+                onItemClick = { restId, itemId ->
+                    navController.navigate(Screen.MenuItem.createRoute(restId, itemId))
                 }
             )
         }
