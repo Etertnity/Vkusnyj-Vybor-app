@@ -41,6 +41,7 @@ fun RestaurantScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val cartItems by viewModel.cartStore.items.collectAsStateWithLifecycle()
+    val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
     val restaurant = uiState.restaurant
 
     if (restaurant == null) {
@@ -117,7 +118,7 @@ fun RestaurantScreen(
                     items = category.items,
                     key = { it.id }
                 ) { menuItem ->
-                    val isFav = menuItem.id in uiState.favorites
+                    val isFav = menuItem.id in favoriteIds
                     val displayItem = menuItem.copy(isFavorite = isFav)
                     val quantity = viewModel.getCartQuantity(menuItem.id)
 
@@ -127,7 +128,7 @@ fun RestaurantScreen(
                         quantity = quantity,
                         onAddToCart = { viewModel.addToCart(menuItem) },
                         onRemoveFromCart = { viewModel.removeFromCart(menuItem.id) },
-                        onFavoriteToggle = { viewModel.toggleFavorite(menuItem.id) },
+                        onFavoriteToggle = { viewModel.toggleFavorite(menuItem) },
                         onClick = { onItemClick(restaurant.id, menuItem.id) },
                         modifier = Modifier
                             .padding(horizontal = 16.dp, vertical = 4.dp)

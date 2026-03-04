@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import com.vkusnyvybor.data.model.MenuItem
 import com.vkusnyvybor.data.model.Restaurant
 import com.vkusnyvybor.data.model.RestaurantTab
+import com.vkusnyvybor.data.repository.FavoritesStore
 import com.vkusnyvybor.data.repository.MockRepository
 import com.vkusnyvybor.ui.screens.cart.CartStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +17,6 @@ import javax.inject.Inject
 data class RestaurantUiState(
     val restaurant: Restaurant? = null,
     val selectedTab: RestaurantTab = RestaurantTab.MAIN_MENU,
-    val favorites: Set<String> = emptySet(),
     val isLoading: Boolean = true
 )
 
@@ -24,13 +24,16 @@ data class RestaurantUiState(
 class RestaurantViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: MockRepository,
-    val cartStore: CartStore
+    val cartStore: CartStore,
+    val favoritesStore: FavoritesStore
 ) : ViewModel() {
 
     private val restaurantId: String = savedStateHandle["restaurantId"] ?: ""
 
     private val _uiState = MutableStateFlow(RestaurantUiState())
     val uiState: StateFlow<RestaurantUiState> = _uiState.asStateFlow()
+
+    val favoriteIds = favoritesStore.favoriteIds
 
     init {
         loadRestaurant()
@@ -48,12 +51,12 @@ class RestaurantViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(selectedTab = tab)
     }
 
-    fun toggleFavorite(itemId: String) {
-        val current = _uiState.value.favorites
-        _uiState.value = _uiState.value.copy(
-            favorites = if (itemId in current) current - itemId else current + itemId
-        )
+    fun toggleFavorite(item: MenuItem) {
+        favoritesStore.toggle(item)
     }
+
+    fun isFavorite(itemId: String): Boolean =
+        favoritesStore.isFavorite(itemId)
 
     fun addToCart(item: MenuItem) {
         cartStore.addItem(item)

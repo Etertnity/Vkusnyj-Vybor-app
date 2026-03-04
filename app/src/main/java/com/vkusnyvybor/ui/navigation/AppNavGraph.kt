@@ -77,6 +77,9 @@ fun AppNavGraph(navController: NavHostController) {
             FavoritesScreen(
                 onRestaurantClick = { restaurantId ->
                     navController.navigate(Screen.Restaurant.createRoute(restaurantId))
+                },
+                onItemClick = { restId, itemId ->
+                    navController.navigate(Screen.MenuItem.createRoute(restId, itemId))
                 }
             )
         }

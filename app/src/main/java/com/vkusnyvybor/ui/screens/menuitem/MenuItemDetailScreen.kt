@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vkusnyvybor.data.model.MenuItem
 import com.vkusnyvybor.data.model.Restaurant
 import com.vkusnyvybor.data.model.RestaurantColors
+import com.vkusnyvybor.data.repository.FavoritesStore
 import com.vkusnyvybor.data.repository.MockRepository
 import com.vkusnyvybor.ui.screens.cart.CartStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -47,7 +48,8 @@ import javax.inject.Inject
 class MenuItemDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: MockRepository,
-    val cartStore: CartStore
+    val cartStore: CartStore,
+    private val favoritesStore: FavoritesStore
 ) : ViewModel() {
 
     private val restaurantId: String = savedStateHandle["restaurantId"] ?: ""
@@ -59,8 +61,7 @@ class MenuItemDetailViewModel @Inject constructor(
     private val _restaurant = MutableStateFlow<Restaurant?>(null)
     val restaurant: StateFlow<Restaurant?> = _restaurant.asStateFlow()
 
-    private val _isFavorite = MutableStateFlow(false)
-    val isFavorite: StateFlow<Boolean> = _isFavorite.asStateFlow()
+    val isFavorite: StateFlow<Boolean> get() = MutableStateFlow(favoritesStore.isFavorite(itemId))
 
     init {
         val rest = repository.getRestaurantById(restaurantId)
@@ -71,7 +72,7 @@ class MenuItemDetailViewModel @Inject constructor(
     }
 
     fun toggleFavorite() {
-        _isFavorite.value = !_isFavorite.value
+        _menuItem.value?.let { favoritesStore.toggle(it) }
     }
 
     fun addToCart() {
