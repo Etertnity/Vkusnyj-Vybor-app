@@ -224,6 +224,7 @@ fun AnimatedFavoriteButton(
 
 // ── Карточка товара ───────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MenuItemCard(
     item: MenuItem,
@@ -232,9 +233,11 @@ fun MenuItemCard(
     onAddToCart: () -> Unit,
     onRemoveFromCart: () -> Unit,
     onFavoriteToggle: () -> Unit,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
+        onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(

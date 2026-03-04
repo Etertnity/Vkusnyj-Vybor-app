@@ -36,6 +36,7 @@ import com.vkusnyvybor.ui.components.MenuItemCard
 fun RestaurantScreen(
     restaurantId: String,
     onBackClick: () -> Unit,
+    onItemClick: (String, String) -> Unit = { _, _ -> },
     viewModel: RestaurantViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -127,6 +128,7 @@ fun RestaurantScreen(
                         onAddToCart = { viewModel.addToCart(menuItem) },
                         onRemoveFromCart = { viewModel.removeFromCart(menuItem.id) },
                         onFavoriteToggle = { viewModel.toggleFavorite(menuItem.id) },
+                        onClick = { onItemClick(restaurant.id, menuItem.id) },
                         modifier = Modifier
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )

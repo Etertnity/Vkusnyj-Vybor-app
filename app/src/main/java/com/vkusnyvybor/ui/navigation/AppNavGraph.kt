@@ -15,6 +15,8 @@ import com.vkusnyvybor.ui.screens.map.MapScreen
 import com.vkusnyvybor.ui.screens.profile.ProfileScreen
 import com.vkusnyvybor.ui.screens.restaurant.RestaurantScreen
 
+import com.vkusnyvybor.ui.screens.menuitem.MenuItemDetailScreen
+
 @Composable
 fun AppNavGraph(navController: NavHostController) {
     NavHost(
@@ -114,6 +116,39 @@ fun AppNavGraph(navController: NavHostController) {
             val restaurantId = backStackEntry.arguments?.getString("restaurantId") ?: return@composable
             RestaurantScreen(
                 restaurantId = restaurantId,
+                onBackClick = { navController.popBackStack() },
+                onItemClick = { restId, itemId ->
+                    navController.navigate(Screen.MenuItem.createRoute(restId, itemId))
+                }
+            )
+        }
+
+        // ── Menu Item Detail ──
+
+        composable(
+            route = Screen.MenuItem.route,
+            arguments = listOf(
+                navArgument("restaurantId") { type = NavType.StringType },
+                navArgument("itemId") { type = NavType.StringType }
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(350)
+                ) + fadeIn(tween(300))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = tween(350)
+                ) + fadeOut(tween(250))
+            }
+        ) { backStackEntry ->
+            val restaurantId = backStackEntry.arguments?.getString("restaurantId") ?: return@composable
+            val itemId = backStackEntry.arguments?.getString("itemId") ?: return@composable
+            MenuItemDetailScreen(
+                restaurantId = restaurantId,
+                itemId = itemId,
                 onBackClick = { navController.popBackStack() }
             )
         }
