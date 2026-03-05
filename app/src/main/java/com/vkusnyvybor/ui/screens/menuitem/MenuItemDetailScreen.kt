@@ -2,7 +2,9 @@ package com.vkusnyvybor.ui.screens.menuitem
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -17,9 +19,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -30,7 +33,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vkusnyvybor.data.model.MenuItem
 import com.vkusnyvybor.data.model.Restaurant
-import com.vkusnyvybor.data.model.RestaurantColors
 import com.vkusnyvybor.data.repository.FavoritesStore
 import com.vkusnyvybor.data.repository.MockRepository
 import com.vkusnyvybor.ui.screens.cart.CartStore
@@ -39,10 +41,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
-
-// ══════════════════════════════════════════════════════════════
-//  ViewModel
-// ══════════════════════════════════════════════════════════════
 
 @HiltViewModel
 class MenuItemDetailViewModel @Inject constructor(
@@ -61,7 +59,8 @@ class MenuItemDetailViewModel @Inject constructor(
     private val _restaurant = MutableStateFlow<Restaurant?>(null)
     val restaurant: StateFlow<Restaurant?> = _restaurant.asStateFlow()
 
-    val isFavorite: StateFlow<Boolean> get() = MutableStateFlow(favoritesStore.isFavorite(itemId))
+    private val _isFavorite = MutableStateFlow(false)
+    val isFavorite: StateFlow<Boolean> = _isFavorite.asStateFlow()
 
     init {
         val rest = repository.getRestaurantById(restaurantId)
@@ -69,10 +68,15 @@ class MenuItemDetailViewModel @Inject constructor(
         _menuItem.value = rest?.categories
             ?.flatMap { it.items }
             ?.find { it.id == itemId }
+        
+        _isFavorite.value = favoritesStore.isFavorite(itemId)
     }
 
     fun toggleFavorite() {
-        _menuItem.value?.let { favoritesStore.toggle(it) }
+        _menuItem.value?.let { 
+            favoritesStore.toggle(it)
+            _isFavorite.value = favoritesStore.isFavorite(itemId)
+        }
     }
 
     fun addToCart() {
@@ -87,10 +91,7 @@ class MenuItemDetailViewModel @Inject constructor(
         _menuItem.value?.let { cartStore.getQuantity(it.id) } ?: 0
 }
 
-// ══════════════════════════════════════════════════════════════
-//  Screen
-// ══════════════════════════════════════════════════════════════
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MenuItemDetailScreen(
     restaurantId: String,
@@ -101,407 +102,171 @@ fun MenuItemDetailScreen(
     val menuItem by viewModel.menuItem.collectAsStateWithLifecycle()
     val restaurant by viewModel.restaurant.collectAsStateWithLifecycle()
     val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
-    val cartItems by viewModel.cartStore.items.collectAsStateWithLifecycle()
 
-    val item = menuItem
-    val rest = restaurant
-
-    if (item == null || rest == null) {
+    if (menuItem == null || restaurant == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
         return
     }
 
+    val item = menuItem!!
+    val rest = restaurant!!
     val colors = rest.colors
     val quantity = viewModel.getQuantity()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        // Основной скроллируемый контент
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // ── Hero ──────────────────────────────────────
-            HeroSection(
-                item = item,
-                colors = colors,
-                isFavorite = isFavorite,
-                onBackClick = onBackClick,
-                onFavoriteToggle = { viewModel.toggleFavorite() }
-            )
-
-            // ── Контент ───────────────────────────────────
-            Column(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Spacer(Modifier.height(4.dp))
-
-                // Название и цена
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "${item.price}\u20BD",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.primary
-                    )
-                    if (item.oldPrice != null) {
-                        Text(
-                            text = "${item.oldPrice}\u20BD",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.outline,
-                            textDecoration = TextDecoration.LineThrough
-                        )
-                        Surface(
-                            color = Color(0xFFE53935).copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            val discount = ((1 - item.price.toFloat() / item.oldPrice) * 100).toInt()
-                            Text(
-                                text = "-${discount}%",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color(0xFFE53935),
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Ресторан
-                Surface(
-                    color = colors.primary.copy(alpha = 0.08f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Filled.Store, "Ресторан",
-                            tint = colors.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = rest.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = colors.primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                Icons.Filled.Star, "Рейтинг",
-                                tint = Color(0xFFFFC107),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                "${item.rating}",
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                    }
-                }
-
-                // Описание
-                if (item.description.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            "Описание",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = item.description,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                // Характеристики
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        "Характеристики",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    InfoRow("Вес", item.weight.ifEmpty { "—" })
-                    InfoRow("Категория", item.category)
-                    InfoRow("Рейтинг", "${item.rating} / 5.0")
-                }
-
-                // Пищевая ценность (моковые данные)
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Пищевая ценность (на порцию)",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        NutritionChip("Ккал", "${(item.price * 1.2).toInt()}", colors.primary)
-                        NutritionChip("Белки", "${(item.price * 0.05).toInt()}г", Color(0xFF4CAF50))
-                        NutritionChip("Жиры", "${(item.price * 0.04).toInt()}г", Color(0xFFFFC107))
-                        NutritionChip("Углеводы", "${(item.price * 0.08).toInt()}г", Color(0xFF2196F3))
-                    }
-                }
-
-                // Отступ под кнопку
-                Spacer(Modifier.height(100.dp))
-            }
-        }
-
-        // ── Нижняя кнопка добавить ────────────────────────
-        Surface(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            shadowElevation = 8.dp,
-            color = MaterialTheme.colorScheme.surface
-        ) {
-            Row(
+            // Hero секция с градиентом от основного цвета ресторана
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .height(340.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(colors.primary.copy(alpha = 0.25f), Color.Transparent)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                if (quantity > 0) {
-                    // Контролы количества
-                    FilledIconButton(
-                        onClick = { viewModel.removeFromCart() },
-                        modifier = Modifier.size(44.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = colors.primary.copy(alpha = 0.12f),
-                            contentColor = colors.primary
-                        )
-                    ) {
-                        Icon(Icons.Filled.Remove, "Убрать")
+                val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                val scale by infiniteTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 1.05f,
+                    animationSpec = infiniteRepeatable(tween(1500, easing = EaseInOutSine), RepeatMode.Reverse),
+                    label = "scale"
+                )
+                
+                Text(
+                    getDetailEmoji(item.category),
+                    fontSize = 160.sp,
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
                     }
+                )
+            }
 
-                    Text(
-                        text = "$quantity",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.widthIn(min = 32.dp),
-                    )
-
-                    Button(
-                        onClick = { viewModel.addToCart() },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.primary
-                        )
-                    ) {
-                        Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "Ещё \u2022 ${item.price}\u20BD",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                } else {
-                    Button(
-                        onClick = { viewModel.addToCart() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.primary
-                        )
-                    ) {
-                        Icon(Icons.Filled.ShoppingCart, null, Modifier.size(20.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "Добавить в корзину \u2022 ${item.price}\u20BD",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
+            Column(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(item.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("${item.price}\u20BD", style = MaterialTheme.typography.headlineSmall, color = colors.primary, fontWeight = FontWeight.Bold)
+                        if (item.oldPrice != null) {
+                            Text("${item.oldPrice}\u20BD", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.outline, textDecoration = TextDecoration.LineThrough)
+                        }
                     }
                 }
+
+                ListItem(
+                    headlineContent = { Text(rest.name, fontWeight = FontWeight.SemiBold) },
+                    supportingContent = { Text("Рейтинг блюда: ${item.rating}") },
+                    leadingContent = { 
+                        Surface(Modifier.size(44.dp), shape = CircleShape, color = colors.primary.copy(0.1f)) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Filled.Store, null, tint = colors.primary, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                    },
+                    trailingContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Icon(Icons.Filled.Star, null, Modifier.size(20.dp), tint = Color(0xFFFFB300))
+                            Text("${item.rating}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(0.3f)),
+                    modifier = Modifier.clip(RoundedCornerShape(16.dp)).border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(0.5f), RoundedCornerShape(16.dp))
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Описание", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(item.description, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 24.sp)
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Пищевая ценность", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Белки", "Жиры", "Углеводы", "Ккал").forEach { label ->
+                            Surface(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(0.4f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(0.5f))
+                            ) {
+                                Column(Modifier.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                                    Text("--", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(Modifier.height(140.dp)) // Отступ для плавающей кнопки
             }
         }
-    }
-}
 
-// ══════════════════════════════════════════════════════════════
-//  Hero секция с градиентом и emoji
-// ══════════════════════════════════════════════════════════════
-
-@Composable
-private fun HeroSection(
-    item: MenuItem,
-    colors: RestaurantColors,
-    isFavorite: Boolean,
-    onBackClick: () -> Unit,
-    onFavoriteToggle: () -> Unit
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "detail_hero")
-    val offset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 300f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "hero_shift"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(280.dp)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        colors.gradientStart.copy(alpha = 0.15f),
-                        colors.gradientEnd.copy(alpha = 0.08f),
-                        MaterialTheme.colorScheme.surface
-                    )
-                )
-            )
-    ) {
-        // Декоративные круги
-        Box(
-            modifier = Modifier
-                .size(200.dp)
-                .offset(x = (offset * 0.2f - 50).dp, y = (-30).dp)
-                .clip(CircleShape)
-                .background(colors.primary.copy(alpha = 0.05f))
-        )
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .align(Alignment.BottomEnd)
-                .offset(x = 40.dp, y = 20.dp)
-                .clip(CircleShape)
-                .background(colors.secondary.copy(alpha = 0.06f))
-        )
-
-        // Emoji товара по центру
-        val emojiScale by infiniteTransition.animateFloat(
-            initialValue = 1f,
-            targetValue = 1.05f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(3000, easing = EaseInOutSine),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "emoji_pulse"
-        )
-
-        Text(
-            text = getDetailEmoji(item.category),
-            fontSize = 96.sp,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(y = 10.dp)
-        )
-
-        // Навигация
+        // Плавающие кнопки управления сверху (ФИКС: Используем WindowInsets)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 8.dp, end = 8.dp, top = 40.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
                 onClick = onBackClick,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(0.8f), CircleShape)
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
             }
-
             IconButton(
-                onClick = onFavoriteToggle,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                onClick = { viewModel.toggleFavorite() },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(0.8f), CircleShape)
             ) {
                 Icon(
                     if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    "Избранное",
-                    tint = if (isFavorite) Color(0xFFE53935)
-                           else MaterialTheme.colorScheme.onSurface
+                    null,
+                    tint = if (isFavorite) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurface
                 )
             }
         }
-    }
-}
 
-// ══════════════════════════════════════════════════════════════
-//  Вспомогательные компоненты
-// ══════════════════════════════════════════════════════════════
-
-@Composable
-private fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-private fun NutritionChip(
-    label: String,
-    value: String,
-    color: Color
-) {
-    Surface(
-        color = color.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        // Плавающая кнопка корзины (ФИКС: Используем WindowInsets)
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(start = 20.dp, end = 20.dp, bottom = 24.dp)
         ) {
-            Text(
-                value,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Button(
+                onClick = { viewModel.addToCart() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp, pressedElevation = 4.dp)
+            ) {
+                Icon(Icons.Filled.ShoppingCart, null, Modifier.size(24.dp))
+                Spacer(Modifier.width(12.dp))
+                val priceText = if (quantity > 0) "${quantity} шт \u2022 ${item.price * quantity}\u20BD" else "В корзину \u2022 ${item.price}\u20BD"
+                Text(
+                    text = priceText,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

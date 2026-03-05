@@ -2,74 +2,75 @@ package com.vkusnyvybor.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ── Основная палитра приложения (нейтральная) ─────────────────
+// ── LIGHT THEME ROLES (Material 3) ────────────────────────────
 
-val Primary = Color(0xFF6750A4)
+val Primary = Color(0xFF006874)
 val OnPrimary = Color(0xFFFFFFFF)
-val PrimaryContainer = Color(0xFFEADDFF)
-val OnPrimaryContainer = Color(0xFF21005D)
+val PrimaryContainer = Color(0xFF97F0FF)
+val OnPrimaryContainer = Color(0xFF001F24)
 
-val Secondary = Color(0xFF625B71)
+val Secondary = Color(0xFF4A6267)
 val OnSecondary = Color(0xFFFFFFFF)
-val SecondaryContainer = Color(0xFFE8DEF8)
-val OnSecondaryContainer = Color(0xFF1D192B)
+val SecondaryContainer = Color(0xFFCDE7EC)
+val OnSecondaryContainer = Color(0xFF051F23)
 
-val Tertiary = Color(0xFF7D5260)
+val Tertiary = Color(0xFF525E7D)
 val OnTertiary = Color(0xFFFFFFFF)
-val TertiaryContainer = Color(0xFFFFD8E4)
-val OnTertiaryContainer = Color(0xFF31111D)
+val TertiaryContainer = Color(0xFFDAE2FF)
+val OnTertiaryContainer = Color(0xFF0E1B37)
 
-val Error = Color(0xFFB3261E)
+val Error = Color(0xFFBA1A1A)
 val OnError = Color(0xFFFFFFFF)
-val ErrorContainer = Color(0xFFF9DEDC)
-val OnErrorContainer = Color(0xFF410E0B)
+val ErrorContainer = Color(0xFFFFDAD6)
+val OnErrorContainer = Color(0xFF410002)
 
-val Background = Color(0xFFFFFBFE)
-val OnBackground = Color(0xFF1C1B1F)
-val Surface = Color(0xFFFFFBFE)
-val OnSurface = Color(0xFF1C1B1F)
-val SurfaceVariant = Color(0xFFE7E0EC)
-val OnSurfaceVariant = Color(0xFF49454F)
+val Background = Color(0xFFFBFCFD)
+val OnBackground = Color(0xFF191C1D)
 
-val Outline = Color(0xFF79747E)
-val OutlineVariant = Color(0xFFCAC4D0)
+val Surface = Color(0xFFFBFCFD)
+val OnSurface = Color(0xFF191C1D)
+val SurfaceVariant = Color(0xFFDBE4E6)
+val OnSurfaceVariant = Color(0xFF3F484A)
 
-// ── Dark theme ────────────────────────────────────────────────
+val Outline = Color(0xFF6F797A)
+val OutlineVariant = Color(0xFFBFC8CA)
 
-val PrimaryDark = Color(0xFFD0BCFF)
-val OnPrimaryDark = Color(0xFF381E72)
-val PrimaryContainerDark = Color(0xFF4F378B)
-val OnPrimaryContainerDark = Color(0xFFEADDFF)
+val InverseSurface = Color(0xFF2E3132)
+val InverseOnSurface = Color(0xFFEFF1F1)
+val InversePrimary = Color(0xFF4FD8EB)
 
-val SecondaryDark = Color(0xFFCCC2DC)
-val OnSecondaryDark = Color(0xFF332D41)
-val SecondaryContainerDark = Color(0xFF4A4458)
-val OnSecondaryContainerDark = Color(0xFFE8DEF8)
+// ── DARK THEME ROLES (Material 3) ─────────────────────────────
 
-val TertiaryDark = Color(0xFFEFB8C8)
-val OnTertiaryDark = Color(0xFF492532)
-val TertiaryContainerDark = Color(0xFF633B48)
-val OnTertiaryContainerDark = Color(0xFFFFD8E4)
+val PrimaryDark = Color(0xFF4FD8EB)
+val OnPrimaryDark = Color(0xFF00363D)
+val PrimaryContainerDark = Color(0xFF004F58)
+val OnPrimaryContainerDark = Color(0xFF97F0FF)
 
-val ErrorDark = Color(0xFFF2B8B5)
-val OnErrorDark = Color(0xFF601410)
-val ErrorContainerDark = Color(0xFF8C1D18)
-val OnErrorContainerDark = Color(0xFFF9DEDC)
+val SecondaryDark = Color(0xFFB1CBD0)
+val OnSecondaryDark = Color(0xFF1C3438)
+val SecondaryContainerDark = Color(0xFF334B4F)
+val OnSecondaryContainerDark = Color(0xFFCDE7EC)
 
-val BackgroundDark = Color(0xFF1C1B1F)
-val OnBackgroundDark = Color(0xFFE6E1E5)
-val SurfaceDark = Color(0xFF1C1B1F)
-val OnSurfaceDark = Color(0xFFE6E1E5)
-val SurfaceVariantDark = Color(0xFF49454F)
-val OnSurfaceVariantDark = Color(0xFFCAC4D0)
+val TertiaryDark = Color(0xFFBAC6EA)
+val OnTertiaryDark = Color(0xFF24304D)
+val TertiaryContainerDark = Color(0xFF3B4664)
+val OnTertiaryContainerDark = Color(0xFFDAE2FF)
 
-// ── Акцентные цвета для карточек ──────────────────────────────
+val ErrorDark = Color(0xFFFFB4AB)
+val OnErrorDark = Color(0xFF690005)
+val ErrorContainerDark = Color(0xFF93000A)
+val OnErrorContainerDark = Color(0xFFFFDAD6)
 
-val CardGreen = Color(0xFFE8F5E9)
-val CardOrange = Color(0xFFFFF3E0)
-val CardRed = Color(0xFFFFEBEE)
-val CardBlue = Color(0xFFE3F2FD)
-val CardYellow = Color(0xFFFFFDE7)
+val BackgroundDark = Color(0xFF191C1D)
+val OnBackgroundDark = Color(0xFFE1E3E3)
+
+val SurfaceDark = Color(0xFF191C1D)
+val OnSurfaceDark = Color(0xFFE1E3E3)
+val SurfaceVariantDark = Color(0xFF3F484A)
+val OnSurfaceVariantDark = Color(0xFFBFC8CA)
+
+val OutlineDark = Color(0xFF899294)
+val OutlineVariantDark = Color(0xFF3F484A)
 
 // ── Shimmer ───────────────────────────────────────────────────
 

@@ -16,6 +16,7 @@ import com.vkusnyvybor.ui.screens.profile.ProfileScreen
 import com.vkusnyvybor.ui.screens.restaurant.RestaurantScreen
 
 import com.vkusnyvybor.ui.screens.menuitem.MenuItemDetailScreen
+import com.vkusnyvybor.ui.screens.order.OrderDetailScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
@@ -52,6 +53,16 @@ fun AppNavGraph(navController: NavHostController) {
                 },
                 onItemClick = { restId, itemId ->
                     navController.navigate(Screen.MenuItem.createRoute(restId, itemId))
+                },
+                onOrderClick = { orderId ->
+                    navController.navigate(Screen.OrderDetail.createRoute(orderId))
+                },
+                onCartClick = {
+                    navController.navigate(Screen.Cart.route) {
+                        popUpTo(Screen.Home.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             )
         }
@@ -125,6 +136,14 @@ fun AppNavGraph(navController: NavHostController) {
                 onBackClick = { navController.popBackStack() },
                 onItemClick = { restId, itemId ->
                     navController.navigate(Screen.MenuItem.createRoute(restId, itemId))
+                },
+                onCartClick = {
+                    navController.popBackStack()
+                    navController.navigate(Screen.Cart.route) {
+                        popUpTo(Screen.Home.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             )
         }
@@ -156,6 +175,41 @@ fun AppNavGraph(navController: NavHostController) {
                 restaurantId = restaurantId,
                 itemId = itemId,
                 onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // ── Order Detail ──
+
+        composable(
+            route = Screen.OrderDetail.route,
+            arguments = listOf(
+                navArgument("orderId") { type = NavType.StringType }
+            ),
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(350)
+                ) + fadeIn(tween(300))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = tween(350)
+                ) + fadeOut(tween(250))
+            }
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: return@composable
+            OrderDetailScreen(
+                orderId = orderId,
+                onBackClick = { navController.popBackStack() },
+                onCartClick = {
+                    navController.popBackStack()
+                    navController.navigate(Screen.Cart.route) {
+                        popUpTo(Screen.Home.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
             )
         }
     }

@@ -22,9 +22,9 @@ fun MapScreen() {
                 tint = MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.height(16.dp))
-            Text("Карта ресторанов", style = MaterialTheme.typography.headlineSmall)
+            Text("Выбор предприятия", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Скоро здесь появится карта",
+                "Выберите точку на карте для заказа",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

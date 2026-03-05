@@ -1,15 +1,19 @@
 package com.vkusnyvybor.ui.screens.home
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vkusnyvybor.data.model.MenuItem
 import com.vkusnyvybor.data.model.Order
 import com.vkusnyvybor.data.model.Restaurant
 import com.vkusnyvybor.data.repository.MockRepository
+import com.vkusnyvybor.data.repository.OrdersStore
 import com.vkusnyvybor.ui.screens.cart.CartStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -27,14 +31,18 @@ data class HomeUiState(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: MockRepository,
-    val cartStore: CartStore
+    val cartStore: CartStore,
+    private val ordersStore: OrdersStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState(isLoading = true))
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
+        // Засеиваем моковые заказы если хранилище пустое
+        ordersStore.seedIfEmpty(repository.getRecentOrders())
         loadData()
+        observeOrders()
     }
 
     private fun loadData() {
@@ -43,23 +51,25 @@ class HomeViewModel @Inject constructor(
 
         _uiState.value = HomeUiState(
             restaurants = repository.getRestaurants(),
-            recentOrders = repository.getRecentOrders(),
+            recentOrders = ordersStore.orders.value,
             allMenuItems = allItems,
             categories = categories,
             isLoading = false
         )
     }
 
+    private fun observeOrders() {
+        viewModelScope.launch {
+            ordersStore.orders.collect { orders ->
+                _uiState.value = _uiState.value.copy(recentOrders = orders)
+            }
+        }
+    }
+
     fun onSearchQueryChanged(query: String) {
         val current = _uiState.value
         val isSearching = query.isNotBlank() || current.selectedCategory != null
-
-        val results = filterItems(
-            items = current.allMenuItems,
-            query = query,
-            category = current.selectedCategory
-        )
-
+        val results = filterItems(current.allMenuItems, query, current.selectedCategory)
         _uiState.value = current.copy(
             searchQuery = query,
             searchResults = results,
@@ -71,13 +81,7 @@ class HomeViewModel @Inject constructor(
         val current = _uiState.value
         val newCategory = if (current.selectedCategory == category) null else category
         val isSearching = current.searchQuery.isNotBlank() || newCategory != null
-
-        val results = filterItems(
-            items = current.allMenuItems,
-            query = current.searchQuery,
-            category = newCategory
-        )
-
+        val results = filterItems(current.allMenuItems, current.searchQuery, newCategory)
         _uiState.value = current.copy(
             selectedCategory = newCategory,
             searchResults = results,
@@ -86,8 +90,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun clearSearch() {
-        val current = _uiState.value
-        _uiState.value = current.copy(
+        _uiState.value = _uiState.value.copy(
             searchQuery = "",
             selectedCategory = null,
             searchResults = emptyList(),
@@ -99,13 +102,12 @@ class HomeViewModel @Inject constructor(
         cartStore.addItem(item)
     }
 
-    private fun filterItems(
-        items: List<MenuItem>,
-        query: String,
-        category: String?
-    ): List<MenuItem> {
-        var filtered = items
+    fun removeFromCart(itemId: String) {
+        cartStore.removeItem(itemId)
+    }
 
+    private fun filterItems(items: List<MenuItem>, query: String, category: String?): List<MenuItem> {
+        var filtered = items
         if (query.isNotBlank()) {
             val q = query.lowercase()
             filtered = filtered.filter {
@@ -114,11 +116,9 @@ class HomeViewModel @Inject constructor(
                 it.category.lowercase().contains(q)
             }
         }
-
         if (category != null) {
             filtered = filtered.filter { it.category == category }
         }
-
         return filtered
     }
 }
