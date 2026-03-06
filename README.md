@@ -30,8 +30,6 @@
 | DI | Hilt (Dagger) |
 | Состояние | ViewModel + StateFlow |
 | Изображения | Coil |
-| Сеть | Retrofit + OkHttp _(подготовлено)_ |
-| БД | Room _(подготовлено)_ |
 | Сборка | Gradle (Kotlin DSL) |
 
 ---
