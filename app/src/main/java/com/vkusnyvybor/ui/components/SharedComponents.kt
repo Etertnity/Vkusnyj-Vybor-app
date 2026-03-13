@@ -2,37 +2,35 @@ package com.vkusnyvybor.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vkusnyvybor.data.model.MenuItem
-import com.vkusnyvybor.data.model.RestaurantColors
-import com.vkusnyvybor.ui.theme.ShimmerBase
-import com.vkusnyvybor.ui.theme.ShimmerHighlight
+import com.vkusnyvybor.ui.theme.*
 
-// ── Shimmer эффект ────────────────────────────────────────────
+// ── Shimmer эффект (Marathon — неоновый) ──────────────────────
 
 @Composable
 fun ShimmerBox(
     modifier: Modifier = Modifier,
-    shape: RoundedCornerShape = RoundedCornerShape(12.dp)
+    shape: RoundedCornerShape = RoundedCornerShape(4.dp)
 ) {
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim by transition.animateFloat(
@@ -58,51 +56,45 @@ fun ShimmerBox(
     )
 }
 
-// ── Градиентный хедер ресторана ───────────────────────────────
+// ── Кибер-карточка с неоновой рамкой ─────────────────────────
 
 @Composable
-fun GradientHeader(
-    colors: RestaurantColors,
+fun CyberCard(
     modifier: Modifier = Modifier,
+    glowColor: Color = NeonCyan,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "gradient_shift")
-    val offset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 500f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "gradient_offset"
-    )
-
-    Column(
+    val shape = CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp)
+    Card(
         modifier = modifier
-            .fillMaxWidth()
-            .background(
+            .border(
+                width = 1.dp,
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        colors.gradientStart,
-                        colors.gradientEnd,
-                        colors.primary
-                    ),
-                    start = Offset(offset, 0f),
-                    end = Offset(offset + 600f, 800f)
-                )
-            )
+                        glowColor.copy(alpha = 0.6f),
+                        glowColor.copy(alpha = 0.1f),
+                        Color.Transparent
+                    )
+                ),
+                shape = shape
+            ),
+        shape = shape,
+        colors = CardDefaults.cardColors(
+            containerColor = DarkCard
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         content()
     }
 }
 
-// ── Бейдж с ценой ─────────────────────────────────────────────
+// ── Бейдж с ценой (киберпанк) ────────────────────────────────
 
 @Composable
 fun PriceBadge(
     price: Int,
     oldPrice: Int? = null,
-    accentColor: Color = MaterialTheme.colorScheme.primary,
+    accentColor: Color = NeonCyan,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -111,34 +103,35 @@ fun PriceBadge(
         modifier = modifier
     ) {
         Surface(
-            color = accentColor,
-            shape = RoundedCornerShape(8.dp)
+            color = accentColor.copy(alpha = 0.15f),
+            shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp)
         ) {
             Text(
-                text = "${price}₽",
+                text = "${price}\u20BD",
                 style = MaterialTheme.typography.labelLarge,
-                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                color = accentColor,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
             )
         }
 
         if (oldPrice != null) {
             Text(
-                text = "${oldPrice}₽",
+                text = "${oldPrice}\u20BD",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = OnSurfaceVariant,
                 textDecoration = TextDecoration.LineThrough
             )
         }
     }
 }
 
-// ── Кнопка количества (+/-) ───────────────────────────────────
+// ── Кнопка количества (+/-) — киберпанк ──────────────────────
 
 @Composable
 fun QuantitySelector(
     quantity: Int,
-    accentColor: Color = MaterialTheme.colorScheme.primary,
+    accentColor: Color = NeonCyan,
     onIncrease: () -> Unit,
     onDecrease: () -> Unit,
     modifier: Modifier = Modifier
@@ -152,16 +145,20 @@ fun QuantitySelector(
             FilledIconButton(
                 onClick = onDecrease,
                 modifier = Modifier.size(32.dp),
+                shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp),
                 colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = accentColor
+                    containerColor = accentColor.copy(alpha = 0.15f),
+                    contentColor = accentColor
                 )
             ) {
-                Icon(Icons.Filled.Remove, "Убрать", Modifier.size(16.dp), tint = Color.White)
+                Icon(Icons.Filled.Remove, "Убрать", Modifier.size(16.dp))
             }
 
             Text(
                 text = "$quantity",
                 style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = accentColor,
                 modifier = Modifier.widthIn(min = 24.dp),
             )
         }
@@ -169,78 +166,47 @@ fun QuantitySelector(
         FilledIconButton(
             onClick = onIncrease,
             modifier = Modifier.size(32.dp),
+            shape = CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp),
             colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = accentColor
+                containerColor = accentColor,
+                contentColor = DarkBg
             )
         ) {
-            Icon(Icons.Filled.Add, "Добавить", Modifier.size(16.dp), tint = Color.White)
+            Icon(Icons.Filled.Add, "Добавить", Modifier.size(16.dp))
         }
     }
 }
 
-// ── Кнопка Избранное с анимацией ──────────────────────────────
-
-@Composable
-fun AnimatedFavoriteButton(
-    isFavorite: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val scale by animateFloatAsState(
-        targetValue = if (isFavorite) 1.0f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "fav_scale"
-    )
-
-    // Bounce при переключении
-    var bouncing by remember { mutableStateOf(false) }
-    val bounceScale by animateFloatAsState(
-        targetValue = if (bouncing) 1.3f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        finishedListener = { bouncing = false },
-        label = "bounce"
-    )
-
-    IconButton(
-        onClick = {
-            bouncing = true
-            onToggle()
-        },
-        modifier = modifier.scale(bounceScale)
-    ) {
-        Icon(
-            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-            contentDescription = "Избранное",
-            tint = if (isFavorite) Color(0xFFE53935) else MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-// ── Карточка товара ───────────────────────────────────────────
+// ── Карточка товара (Marathon-стиль) ──────────────────────────
 
 @Composable
 fun MenuItemCard(
     item: MenuItem,
-    restaurantColors: RestaurantColors,
+    accentColor: Color = NeonCyan,
     quantity: Int = 0,
     onAddToCart: () -> Unit,
     onRemoveFromCart: () -> Unit,
-    onFavoriteToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val shape = CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp)
+
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        modifier = modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        accentColor.copy(alpha = 0.4f),
+                        accentColor.copy(alpha = 0.05f),
+                        Color.Transparent
+                    )
+                ),
+                shape = shape
+            ),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -248,24 +214,28 @@ fun MenuItemCard(
                 .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Заглушка для изображения товара
+            // Изображение с неоновой рамкой
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
                     .background(
                         Brush.linearGradient(
                             colors = listOf(
-                                restaurantColors.primary.copy(alpha = 0.1f),
-                                restaurantColors.secondary.copy(alpha = 0.15f)
+                                accentColor.copy(alpha = 0.08f),
+                                NeonMagenta.copy(alpha = 0.05f)
                             )
                         )
+                    )
+                    .border(
+                        1.dp,
+                        accentColor.copy(alpha = 0.2f),
+                        CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                // Здесь будет Coil AsyncImage когда подключим реальные картинки
                 Text(
-                    "🍔",
+                    getEmojiForCategory(item.category),
                     style = MaterialTheme.typography.headlineMedium
                 )
             }
@@ -274,30 +244,20 @@ fun MenuItemCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Text(
-                        text = item.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    AnimatedFavoriteButton(
-                        isFavorite = item.isFavorite,
-                        onToggle = onFavoriteToggle,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
                 if (item.description.isNotEmpty()) {
                     Text(
                         text = item.description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = OnSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -307,7 +267,7 @@ fun MenuItemCard(
                     Text(
                         text = item.weight,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = Outline
                     )
                 }
 
@@ -321,11 +281,11 @@ fun MenuItemCard(
                     PriceBadge(
                         price = item.price,
                         oldPrice = item.oldPrice,
-                        accentColor = restaurantColors.primary
+                        accentColor = accentColor
                     )
                     QuantitySelector(
                         quantity = quantity,
-                        accentColor = restaurantColors.primary,
+                        accentColor = accentColor,
                         onIncrease = onAddToCart,
                         onDecrease = onRemoveFromCart
                     )
@@ -333,4 +293,62 @@ fun MenuItemCard(
             }
         }
     }
+}
+
+// ── Декоративная линия-сканер ─────────────────────────────────
+
+@Composable
+fun ScanLineEffect(
+    modifier: Modifier = Modifier,
+    color: Color = NeonCyan
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "scanline")
+    val offset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "scanline_offset"
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .drawBehind {
+                val lineWidth = size.width * 0.4f
+                val x = (size.width + lineWidth) * offset - lineWidth
+                drawLine(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            color.copy(alpha = 0.6f),
+                            color,
+                            color.copy(alpha = 0.6f),
+                            Color.Transparent
+                        ),
+                        startX = x,
+                        endX = x + lineWidth
+                    ),
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width, 0f),
+                    strokeWidth = 2f
+                )
+            }
+    )
+}
+
+// ── Утилита ───────────────────────────────────────────────────
+
+fun getEmojiForCategory(category: String): String = when (category) {
+    "Бургеры" -> "\uD83C\uDF54"
+    "Гарниры" -> "\uD83C\uDF5F"
+    "Снэки" -> "\uD83C\uDF57"
+    "Напитки" -> "\uD83E\uDD64"
+    "Десерты" -> "\uD83E\uDD67"
+    "Роллы", "Твистеры" -> "\uD83C\uDF2F"
+    "Курица", "Корзинки" -> "\uD83C\uDF57"
+    else -> "\uD83C\uDF74"
 }
