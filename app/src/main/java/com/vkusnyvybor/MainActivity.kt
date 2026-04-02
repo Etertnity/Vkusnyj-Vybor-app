@@ -16,21 +16,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.ViewModelStoreOwner
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.vkusnyvybor.ui.navigation.AppNavGraph
-import com.vkusnyvybor.ui.navigation.BottomNavItem
-import com.vkusnyvybor.ui.navigation.Screen
-import com.vkusnyvybor.ui.screens.home.HomeViewModel
 import com.vkusnyvybor.ui.theme.VkusnyVyborTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
@@ -41,9 +30,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            // Включаем dynamicColor = true для поддержки цветовой гаммы обоев (Android 12+)
             VkusnyVyborTheme(dynamicColor = true) {
-                SplashScreenWrapper {
-                    MainApp()
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    SplashScreenWrapper {
+                        MainApp()
+                    }
                 }
             }
         }
@@ -60,39 +55,26 @@ fun SplashScreenWrapper(content: @Composable () -> Unit) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (isReady) {
-            content()
-        }
+        if (isReady) content()
 
         AnimatedVisibility(
             visible = !isReady,
-            enter = fadeIn(),
             exit = fadeOut(tween(500))
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
+                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.Center
             ) {
                 val infiniteTransition = rememberInfiniteTransition(label = "splash")
                 val pulseScale by infiniteTransition.animateFloat(
-                    initialValue = 1f,
-                    targetValue = 1.15f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1200, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
+                    initialValue = 1f, targetValue = 1.15f,
+                    animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
                     label = "pulse"
                 )
-
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
-                        modifier = Modifier
-                            .size(140.dp)
-                            .scale(pulseScale)
-                            .clip(CircleShape)
-                            .background(Color.White, CircleShape),
+                        Modifier.size(140.dp).scale(pulseScale).clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
@@ -112,71 +94,15 @@ fun SplashScreenWrapper(content: @Composable () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainApp() {
     val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-
-    val bottomBarScreens = BottomNavItem.entries.map { it.route }
-    val showBottomBar = currentDestination?.route in bottomBarScreens
-
-    val context = LocalContext.current
-    val homeViewModel: HomeViewModel = hiltViewModel(context as ViewModelStoreOwner)
 
     Scaffold(
-        bottomBar = {
-            AnimatedVisibility(
-                visible = showBottomBar,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
-            ) {
-                NavigationBar(
-                    tonalElevation = 8.dp,
-                    containerColor = MaterialTheme.colorScheme.surface
-                ) {
-                    BottomNavItem.entries.forEach { item ->
-                        val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-                        
-                        NavigationBarItem(
-                            icon = { Icon(imageVector = if (selected) item.selectedIcon else item.unselectedIcon, contentDescription = null) },
-                            label = { 
-                                Text(
-                                    text = item.label, 
-                                    fontSize = 9.sp,
-                                    maxLines = 1,
-                                    softWrap = false
-                                ) 
-                            },
-                            selected = selected,
-                            onClick = {
-                                if (item == BottomNavItem.RESTAURANTS) {
-                                    homeViewModel.clearSearch()
-                                    navController.navigate(item.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
-                                        launchSingleTop = true
-                                    }
-                                } else {
-                                    navController.navigate(item.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-        },
+        modifier = Modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
-        // ФИКС: Используем отступ снизу, чтобы контент не перекрывался нижней навигацией
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(bottom = if (showBottomBar) innerPadding.calculateBottomPadding() else 0.dp)
-        ) {
+        Box(modifier = Modifier.padding(innerPadding)) {
             AppNavGraph(navController = navController)
         }
     }

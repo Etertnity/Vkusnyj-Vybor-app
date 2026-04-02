@@ -16,11 +16,11 @@ data class Restaurant(
     val name: String,
     val subtitle: String,
     val slogan: String,
-    val logoUrl: String,
-    val heroImageUrl: String,
+    val logoUrl: String = "",
+    val heroImageUrl: String = "",
     val rating: Float,
     val deliveryTime: String,
-    val deliveryPrice: String,
+    val deliveryPrice: String = "",
     val colors: RestaurantColors,
     val categories: List<MenuCategory> = emptyList()
 )
@@ -31,6 +31,25 @@ data class MenuCategory(
     val items: List<MenuItem> = emptyList()
 )
 
+/**
+ * Размер порции (Маленький, Средний, Большой).
+ */
+data class SizeOption(
+    val id: String,
+    val name: String,       // "Маленький", "Средний", "Большой"
+    val priceAdd: Int = 0   // доплата к базовой цене
+)
+
+/**
+ * Ингредиент/модификатор который можно убрать или добавить.
+ */
+data class ItemModifier(
+    val id: String,
+    val name: String,       // "Салат", "Соус", "Лук", "Сыр"
+    val included: Boolean = true,  // входит по умолчанию
+    val priceAdd: Int = 0   // доплата если добавляется дополнительно
+)
+
 data class MenuItem(
     val id: String,
     val restaurantId: String,
@@ -38,19 +57,37 @@ data class MenuItem(
     val description: String,
     val price: Int,
     val oldPrice: Int? = null,
-    val imageUrl: String,
+    val imageUrl: String = "",
     val category: String,
     val rating: Float = 0f,
     val isFavorite: Boolean = false,
     val isAvailable: Boolean = true,
-    val weight: String = ""
+    val weight: String = "",
+    val sizes: List<SizeOption> = emptyList(),
+    val modifiers: List<ItemModifier> = emptyList()
+)
+
+/**
+ * Конфигурация товара в корзине (выбранный размер + модификаторы).
+ */
+data class CartItemConfig(
+    val selectedSizeId: String? = null,
+    val removedModifiers: Set<String> = emptySet(), // IDs убранных ингредиентов (которые были включены)
+    val addedModifiers: Set<String> = emptySet()    // IDs добавленных топпингов (которых не было)
 )
 
 data class CartItem(
     val menuItem: MenuItem,
-    val quantity: Int = 1
+    val quantity: Int = 1,
+    val config: CartItemConfig = CartItemConfig()
 ) {
-    val totalPrice: Int get() = menuItem.price * quantity
+    val sizeAdd: Int get() = menuItem.sizes.find { it.id == config.selectedSizeId }?.priceAdd ?: 0
+    
+    val modifiersAdd: Int get() = menuItem.modifiers
+        .filter { it.id in config.addedModifiers }
+        .sumOf { it.priceAdd }
+
+    val totalPrice: Int get() = (menuItem.price + sizeAdd + modifiersAdd) * quantity
 }
 
 data class Order(

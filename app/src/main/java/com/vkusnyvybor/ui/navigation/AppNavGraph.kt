@@ -9,165 +9,59 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.vkusnyvybor.ui.screens.cart.CartScreen
-import com.vkusnyvybor.ui.screens.favorites.FavoritesScreen
 import com.vkusnyvybor.ui.screens.home.HomeScreen
-import com.vkusnyvybor.ui.screens.map.MapScreen
-import com.vkusnyvybor.ui.screens.profile.ProfileScreen
-import com.vkusnyvybor.ui.screens.restaurant.RestaurantScreen
-
 import com.vkusnyvybor.ui.screens.menuitem.MenuItemDetailScreen
 import com.vkusnyvybor.ui.screens.order.OrderDetailScreen
+import com.vkusnyvybor.ui.screens.profile.ProfileScreen
 
 @Composable
 fun AppNavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route,
-        enterTransition = {
-            fadeIn(animationSpec = tween(300)) +
-                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
-        },
-        exitTransition = {
-            fadeOut(animationSpec = tween(300)) +
-                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
-        },
-        popEnterTransition = {
-            fadeIn(animationSpec = tween(300)) +
-                slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
-        },
-        popExitTransition = {
-            fadeOut(animationSpec = tween(300)) +
-                slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300))
-        }
+        enterTransition = { fadeIn(tween(300)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300)) },
+        exitTransition = { fadeOut(tween(200)) },
+        popEnterTransition = { fadeIn(tween(300)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300)) },
+        popExitTransition = { fadeOut(tween(200)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(300)) }
     ) {
-        // ── Bottom nav screens (crossfade) ──
-
         composable(
             route = Screen.Home.route,
             enterTransition = { fadeIn(tween(200)) },
             exitTransition = { fadeOut(tween(200)) }
         ) {
             HomeScreen(
-                onRestaurantClick = { restaurantId ->
-                    navController.navigate(Screen.Restaurant.createRoute(restaurantId))
-                },
                 onItemClick = { restId, itemId ->
                     navController.navigate(Screen.MenuItem.createRoute(restId, itemId))
+                },
+                onCartClick = {
+                    navController.navigate(Screen.Cart.route)
                 },
                 onOrderClick = { orderId ->
                     navController.navigate(Screen.OrderDetail.createRoute(orderId))
                 },
-                onCartClick = {
-                    navController.navigate(Screen.Cart.route) {
-                        popUpTo(Screen.Home.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                onProfileClick = {
+                    navController.navigate(Screen.Profile.route)
                 }
             )
         }
 
-        composable(
-            route = Screen.Map.route,
-            enterTransition = { fadeIn(tween(200)) },
-            exitTransition = { fadeOut(tween(200)) }
-        ) {
-            MapScreen()
+        composable(route = Screen.Cart.route) {
+            CartScreen(onBackClick = { navController.popBackStack() })
         }
 
-        composable(
-            route = Screen.Cart.route,
-            enterTransition = { fadeIn(tween(200)) },
-            exitTransition = { fadeOut(tween(200)) }
-        ) {
-            CartScreen()
-        }
-
-        composable(
-            route = Screen.Favorites.route,
-            enterTransition = { fadeIn(tween(200)) },
-            exitTransition = { fadeOut(tween(200)) }
-        ) {
-            FavoritesScreen(
-                onRestaurantClick = { restaurantId ->
-                    navController.navigate(Screen.Restaurant.createRoute(restaurantId))
-                },
-                onItemClick = { restId, itemId ->
-                    navController.navigate(Screen.MenuItem.createRoute(restId, itemId))
-                }
-            )
-        }
-
-        composable(
-            route = Screen.Profile.route,
-            enterTransition = { fadeIn(tween(200)) },
-            exitTransition = { fadeOut(tween(200)) }
-        ) {
-            ProfileScreen()
-        }
-
-        // ── Detail screens (slide) ──
-
-        composable(
-            route = Screen.Restaurant.route,
-            arguments = listOf(
-                navArgument("restaurantId") { type = NavType.StringType }
-            ),
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Up,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioLowBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                ) + fadeIn(tween(300))
-            },
-            exitTransition = { fadeOut(tween(200)) },
-            popExitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Down,
-                    animationSpec = tween(350)
-                ) + fadeOut(tween(250))
-            }
-        ) { backStackEntry ->
-            val restaurantId = backStackEntry.arguments?.getString("restaurantId") ?: return@composable
-            RestaurantScreen(
-                restaurantId = restaurantId,
+        composable(route = Screen.Profile.route) {
+            ProfileScreen(
                 onBackClick = { navController.popBackStack() },
-                onItemClick = { restId, itemId ->
-                    navController.navigate(Screen.MenuItem.createRoute(restId, itemId))
-                },
-                onCartClick = {
-                    navController.popBackStack()
-                    navController.navigate(Screen.Cart.route) {
-                        popUpTo(Screen.Home.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
+                onThemeClick = { /* TODO: навигация к экрану выбора темы */ }
             )
         }
-
-        // ── Menu Item Detail ──
 
         composable(
             route = Screen.MenuItem.route,
             arguments = listOf(
                 navArgument("restaurantId") { type = NavType.StringType },
                 navArgument("itemId") { type = NavType.StringType }
-            ),
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Start,
-                    animationSpec = tween(350)
-                ) + fadeIn(tween(300))
-            },
-            popExitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.End,
-                    animationSpec = tween(350)
-                ) + fadeOut(tween(250))
-            }
+            )
         ) { backStackEntry ->
             val restaurantId = backStackEntry.arguments?.getString("restaurantId") ?: return@composable
             val itemId = backStackEntry.arguments?.getString("itemId") ?: return@composable
@@ -178,25 +72,9 @@ fun AppNavGraph(navController: NavHostController) {
             )
         }
 
-        // ── Order Detail ──
-
         composable(
             route = Screen.OrderDetail.route,
-            arguments = listOf(
-                navArgument("orderId") { type = NavType.StringType }
-            ),
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Start,
-                    animationSpec = tween(350)
-                ) + fadeIn(tween(300))
-            },
-            popExitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.End,
-                    animationSpec = tween(350)
-                ) + fadeOut(tween(250))
-            }
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
         ) { backStackEntry ->
             val orderId = backStackEntry.arguments?.getString("orderId") ?: return@composable
             OrderDetailScreen(
@@ -204,11 +82,7 @@ fun AppNavGraph(navController: NavHostController) {
                 onBackClick = { navController.popBackStack() },
                 onCartClick = {
                     navController.popBackStack()
-                    navController.navigate(Screen.Cart.route) {
-                        popUpTo(Screen.Home.route) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    navController.navigate(Screen.Cart.route)
                 }
             )
         }

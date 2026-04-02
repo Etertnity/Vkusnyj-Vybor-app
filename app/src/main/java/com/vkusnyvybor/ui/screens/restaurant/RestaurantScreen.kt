@@ -112,15 +112,12 @@ fun RestaurantScreen(
                     }
 
                     MenuItemCard(
-                        item = menuItem.copy(isFavorite = isFav),
-                        restaurantColors = restaurant.colors,
+                        item = menuItem,
+                        accentColor = restaurant.colors.primary,
                         quantity = quantity,
                         onAddToCart = { viewModel.addToCart(menuItem) },
                         onRemoveFromCart = { viewModel.removeFromCart(menuItem.id) },
-                        onFavoriteToggle = { viewModel.toggleFavorite(menuItem) },
-                        onClick = { onItemClick(restaurant.id, menuItem.id) },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                        useThemePrimary = true
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
             }
