@@ -37,7 +37,6 @@ class OrderDetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val orderId: String = savedStateHandle["orderId"] ?: ""
-
     val order: Order? = ordersStore.getOrderById(orderId)
 
     fun repeatOrder() {
@@ -67,12 +66,10 @@ fun OrderDetailScreen(
         return
     }
 
-    val accentColor = when (order.restaurantId) {
-        "vkusno" -> Color(0xFF1B5E20)
-        "bk" -> Color(0xFFEC1C24)
-        "rostics" -> Color(0xFFD32F2F)
-        else -> Color(0xFF6750A4)
-    }
+    // Вместо жестких цветов ресторанов используем цвета ТЕМЫ
+    // Если нужно выделить ресторан, используем primary текущей темы
+    val themeAccent = MaterialTheme.colorScheme.primary
+    val themeSurface = MaterialTheme.colorScheme.surfaceVariant
 
     if (showRepeatSuccess) {
         AlertDialog(
@@ -106,7 +103,11 @@ fun OrderDetailScreen(
             )
         },
         bottomBar = {
-            Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
+            Surface(
+                shadowElevation = 8.dp, 
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -120,10 +121,10 @@ fun OrderDetailScreen(
                     ) {
                         Text("Итого", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(
-                            "${order.totalPrice}\u20BD",
+                            "${order.totalPrice} ₽",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = accentColor
+                            fontWeight = FontWeight.ExtraBold,
+                            color = themeAccent
                         )
                     }
 
@@ -135,8 +136,8 @@ fun OrderDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                        shape = MaterialTheme.shapes.large,
+                        colors = ButtonDefaults.buttonColors(containerColor = themeAccent)
                     ) {
                         Icon(Icons.Filled.Replay, null, Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
@@ -151,15 +152,15 @@ fun OrderDetailScreen(
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.padding(padding),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.background),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Заголовок ресторана
+            // Заголовок ресторана в стиле текущей темы
             item {
                 Surface(
-                    color = accentColor.copy(alpha = 0.08f),
-                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -167,58 +168,71 @@ fun OrderDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Filled.Store, "Ресторан", tint = accentColor, modifier = Modifier.size(20.dp))
-                        Text(order.restaurantName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, color = accentColor)
+                        Icon(Icons.Filled.Store, null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp))
+                        Text(
+                            order.restaurantName, 
+                            style = MaterialTheme.typography.titleSmall, 
+                            fontWeight = FontWeight.Bold, 
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
                         Spacer(Modifier.weight(1f))
-                        Surface(
-                            color = when (order.status) {
-                                com.vkusnyvybor.data.model.OrderStatus.COMPLETED -> Color(0xFF4CAF50)
-                                com.vkusnyvybor.data.model.OrderStatus.PREPARING -> Color(0xFFFFC107)
-                                com.vkusnyvybor.data.model.OrderStatus.DELIVERING -> Color(0xFF2196F3)
-                                com.vkusnyvybor.data.model.OrderStatus.CANCELLED -> Color(0xFFE53935)
-                            }.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                when (order.status) {
-                                    com.vkusnyvybor.data.model.OrderStatus.COMPLETED -> "Выполнен"
-                                    com.vkusnyvybor.data.model.OrderStatus.PREPARING -> "Готовится"
-                                    com.vkusnyvybor.data.model.OrderStatus.DELIVERING -> "В пути"
-                                    com.vkusnyvybor.data.model.OrderStatus.CANCELLED -> "Отменён"
-                                },
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
+                        StatusBadge(order.status)
                     }
                 }
             }
 
             item {
                 Text(
-                    "${order.items.sumOf { it.quantity }} позиций",
+                    "${order.items.sumOf { it.quantity }} позиции в заказе",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
-            // Товары заказа
-            items(order.items, key = { it.menuItem.id }) { cartItem ->
-                OrderItemCard(cartItem = cartItem, accentColor = accentColor)
+            items(order.items, key = { it.menuItem.id + it.quantity }) { cartItem ->
+                OrderItemCard(cartItem = cartItem)
             }
         }
     }
 }
 
 @Composable
-private fun OrderItemCard(cartItem: CartItem, accentColor: Color) {
+private fun StatusBadge(status: com.vkusnyvybor.data.model.OrderStatus) {
+    val color = when (status) {
+        com.vkusnyvybor.data.model.OrderStatus.COMPLETED -> Color(0xFF4CAF50)
+        com.vkusnyvybor.data.model.OrderStatus.PREPARING -> Color(0xFFFFC107)
+        com.vkusnyvybor.data.model.OrderStatus.DELIVERING -> Color(0xFF2196F3)
+        com.vkusnyvybor.data.model.OrderStatus.CANCELLED -> Color(0xFFE53935)
+    }
+    Surface(
+        color = color.copy(alpha = 0.15f),
+        shape = MaterialTheme.shapes.small,
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.3f))
+    ) {
+        Text(
+            text = when (status) {
+                com.vkusnyvybor.data.model.OrderStatus.COMPLETED -> "Выполнен"
+                com.vkusnyvybor.data.model.OrderStatus.PREPARING -> "Готовится"
+                com.vkusnyvybor.data.model.OrderStatus.DELIVERING -> "В пути"
+                com.vkusnyvybor.data.model.OrderStatus.CANCELLED -> "Отменён"
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+        )
+    }
+}
+
+@Composable
+private fun OrderItemCard(cartItem: CartItem) {
     val item = cartItem.menuItem
 
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ElevatedCard(
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
@@ -230,34 +244,40 @@ private fun OrderItemCard(cartItem: CartItem, accentColor: Color) {
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(accentColor.copy(alpha = 0.08f), accentColor.copy(alpha = 0.15f))
-                        )
-                    ),
+                    .clip(MaterialTheme.shapes.small)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Text(getEmoji(item.category), style = MaterialTheme.typography.headlineSmall)
             }
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(item.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    item.name, 
+                    style = MaterialTheme.typography.titleSmall, 
+                    fontWeight = FontWeight.Medium, 
+                    maxLines = 1, 
+                    overflow = TextOverflow.Ellipsis
+                )
                 if (item.weight.isNotEmpty()) {
-                    Text(item.weight, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                    Text(
+                        item.weight, 
+                        style = MaterialTheme.typography.labelSmall, 
+                        color = MaterialTheme.colorScheme.outline
+                    )
                 }
             }
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    "${cartItem.totalPrice}\u20BD",
+                    "${cartItem.totalPrice} ₽",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = accentColor
+                    color = MaterialTheme.colorScheme.primary
                 )
                 if (cartItem.quantity > 1) {
                     Text(
-                        "${cartItem.quantity} \u00D7 ${item.price}\u20BD",
+                        "${cartItem.quantity} × ${item.price} ₽",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -268,12 +288,12 @@ private fun OrderItemCard(cartItem: CartItem, accentColor: Color) {
 }
 
 private fun getEmoji(category: String): String = when (category) {
-    "Бургеры" -> "\uD83C\uDF54"
-    "Гарниры" -> "\uD83C\uDF5F"
-    "Снэки" -> "\uD83C\uDF57"
-    "Напитки" -> "\uD83E\uDD64"
-    "Десерты" -> "\uD83E\uDD67"
-    "Роллы", "Твистеры" -> "\uD83C\uDF2F"
-    "Курица", "Корзинки" -> "\uD83C\uDF57"
-    else -> "\uD83C\uDF74"
+    "Бургеры" -> "🍔"
+    "Гарниры" -> "🍟"
+    "Снэки" -> "🍗"
+    "Напитки" -> "🥤"
+    "Десерты" -> "🍰"
+    "Роллы", "Твистеры" -> "🌯"
+    "Курица", "Корзинки" -> "🍗"
+    else -> "🍴"
 }

@@ -2,7 +2,6 @@ package com.vkusnyvybor.ui.screens.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -19,14 +18,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.vkusnyvybor.ui.theme.engine.LocalThemeDecorations
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onBackClick: () -> Unit = {},
-    onThemeClick: () -> Unit = {}
+    onThemeClick: () -> Unit = {},
+    onOrdersClick: () -> Unit = {}
 ) {
+    val themeLogo = LocalThemeDecorations.current.themeLogo
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -54,17 +56,30 @@ fun ProfileScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(96.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                        .size(120.dp)
+                        .padding(8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Filled.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    if (themeLogo != null) {
+                        Box(Modifier.size(100.dp)) {
+                            themeLogo()
+                        }
+                    } else {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Filled.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                    }
                 }
                 Spacer(Modifier.height(16.dp))
                 Text(
@@ -81,13 +96,12 @@ fun ProfileScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            // ── Секция: Заказы ────────────────────────────
             SectionHeader("Заказы")
             ProfileMenuItem(
                 icon = Icons.Outlined.Receipt,
                 title = "Мои заказы",
                 subtitle = "История и текущие заказы",
-                onClick = { }
+                onClick = onOrdersClick
             )
             ProfileMenuItem(
                 icon = Icons.Outlined.LocationOn,
@@ -101,26 +115,12 @@ fun ProfileScreen(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
-            // ── Секция: Настройки ─────────────────────────
             SectionHeader("Настройки")
             ProfileMenuItem(
                 icon = Icons.Outlined.Palette,
                 title = "Тема оформления",
                 subtitle = "Material You, Cyberpunk, Umbrella...",
-                onClick = onThemeClick,
-                trailing = {
-                    Surface(
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Text(
-                            "Скоро",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                        )
-                    }
-                }
+                onClick = onThemeClick
             )
             ProfileMenuItem(
                 icon = Icons.Outlined.Notifications,
@@ -140,7 +140,6 @@ fun ProfileScreen(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
-            // ── Секция: О приложении ──────────────────────
             SectionHeader("О приложении")
             ProfileMenuItem(
                 icon = Icons.Outlined.Info,
@@ -153,15 +152,9 @@ fun ProfileScreen(
                 title = "Пользовательское соглашение",
                 onClick = { }
             )
-            ProfileMenuItem(
-                icon = Icons.Outlined.Shield,
-                title = "Политика конфиденциальности",
-                onClick = { }
-            )
 
             Spacer(Modifier.height(16.dp))
 
-            // ── Выход ─────────────────────────────────────
             OutlinedButton(
                 onClick = { },
                 modifier = Modifier

@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,6 +42,7 @@ import com.vkusnyvybor.data.model.Order
 import com.vkusnyvybor.data.model.Restaurant
 import com.vkusnyvybor.data.model.RestaurantColors
 import com.vkusnyvybor.ui.components.ProductBottomSheet
+import com.vkusnyvybor.ui.theme.engine.LocalThemeDecorations
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -66,12 +68,12 @@ fun HomeScreen(
     var selectedProduct by remember { mutableStateOf<MenuItem?>(null) }
     val totalCount by remember { derivedStateOf { cartItems.sumOf { it.quantity } } }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // ── Фиксированный поиск ────
             Surface(
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp
+                color = MaterialTheme.colorScheme.background,
+                shadowElevation = 2.dp
             ) {
                 Column {
                     Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
@@ -126,9 +128,8 @@ fun HomeScreen(
                     if (categories.isNotEmpty()) {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.surface,
-                            shadowElevation = 3.dp,
-                            tonalElevation = 3.dp
+                            color = MaterialTheme.colorScheme.background,
+                            shadowElevation = 3.dp
                         ) {
                             Column {
                                 Spacer(Modifier.height(8.dp))
@@ -136,9 +137,9 @@ fun HomeScreen(
                                     categories = categories,
                                     onCategoryClick = { categoryName ->
                                         val idx = findCategoryListIndex(uiState.menuCategories, categoryName)
-                                        scope.launch { 
+                                        scope.launch {
                                             // Скроллим так, чтобы заголовок был под чипсами
-                                            listState.animateScrollToItem(idx, -stickyHeaderHeightPx) 
+                                            listState.animateScrollToItem(idx, -stickyHeaderHeightPx)
                                         }
                                     }
                                 )
@@ -192,7 +193,7 @@ fun HomeScreen(
             ProductBottomSheet(
                 item = product,
                 onDismiss = { selectedProduct = null },
-                onAddToCart = { item, config -> 
+                onAddToCart = { item, config ->
                     viewModel.cartStore.addItemWithConfig(item, config)
                     selectedProduct = null
                 }
@@ -208,8 +209,9 @@ private fun RestaurantCarouselM3(
     onRestaurantSelected: (Int) -> Unit
 ) {
     val pagerState = rememberPagerState(initialPage = 0) { restaurants.size }
+    val themeDecorations = LocalThemeDecorations.current
+    val primaryColor = MaterialTheme.colorScheme.primary
 
-    // Надёжное отслеживание текущей страницы
     LaunchedEffect(pagerState.currentPage) {
         onRestaurantSelected(pagerState.currentPage)
     }
@@ -225,30 +227,128 @@ private fun RestaurantCarouselM3(
         ) { index ->
             val restaurant = restaurants[index]
             val themes = remember(restaurant.id) { getThematicEmojis(restaurant.id) }
-            val gradient = Brush.linearGradient(listOf(restaurant.colors.gradientStart, restaurant.colors.gradientEnd))
+
+            // Градиент: brand-цвета + примесь primary из темы
+            val themeTint = primaryColor.copy(alpha = 0.2f)
+            val gradient = Brush.linearGradient(
+                listOf(
+                    blendColors(restaurant.colors.gradientStart, themeTint, 0.15f),
+                    blendColors(restaurant.colors.gradientEnd, themeTint, 0.25f)
+                )
+            )
+
+            val borderModifier = if (themeDecorations.glowAccent) {
+                Modifier.border(
+                    width = 1.dp,
+                    brush = Brush.linearGradient(
+                        listOf(
+                            primaryColor.copy(alpha = 0.5f),
+                            primaryColor.copy(alpha = 0.1f),
+                            Color.Transparent
+                        )
+                    ),
+                    shape = MaterialTheme.shapes.extraLarge
+                )
+            } else Modifier
 
             Card(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(borderModifier),
                 shape = MaterialTheme.shapes.extraLarge,
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Box(Modifier.fillMaxSize().background(gradient)) {
-                    Box(Modifier.size(120.dp).offset(x = 200.dp, y = (-20).dp).clip(CircleShape).background(Color.White.copy(0.06f)))
+                    // Декоративный круг — цвет из темы
+                    Box(
+                        Modifier
+                            .size(120.dp)
+                            .offset(x = 200.dp, y = (-20).dp)
+                            .clip(CircleShape)
+                            .background(primaryColor.copy(alpha = 0.08f))
+                    )
+
+                    // Тематические emoji
                     if (themes.size >= 2) {
-                        Text(themes[0], fontSize = 36.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 24.dp).rotate(15f))
-                        Text(themes[1], fontSize = 44.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 32.dp, end = 48.dp).rotate(-8f))
+                        Text(
+                            themes[0], fontSize = 36.sp,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 16.dp, end = 24.dp)
+                                .rotate(15f)
+                        )
+                        Text(
+                            themes[1], fontSize = 44.sp,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(bottom = 32.dp, end = 48.dp)
+                                .rotate(-8f)
+                        )
                     }
-                    Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                        Text(restaurant.slogan, style = MaterialTheme.typography.labelLarge, color = Color.White.copy(0.85f))
+
+                    // Сканлайн-эффект (если тема поддерживает)
+                    if (themeDecorations.scanlineEffect) {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            themeDecorations.scanlineColor,
+                                            Color.Transparent,
+                                            themeDecorations.scanlineColor,
+                                            Color.Transparent
+                                        ),
+                                        startY = 0f,
+                                        endY = 400f
+                                    )
+                                )
+                        )
+                    }
+
+                    Column(
+                        Modifier.fillMaxSize().padding(20.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            restaurant.slogan,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.White.copy(0.85f)
+                        )
                         Column {
-                            Text(restaurant.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Surface(color = Color.White.copy(0.25f), shape = MaterialTheme.shapes.small) { 
-                                    Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) { 
-                                        Icon(Icons.Filled.Star, null, Modifier.size(14.dp), tint = Color.White); Spacer(Modifier.width(4.dp)); Text("${restaurant.rating}", style = MaterialTheme.typography.labelMedium, color = Color.White) 
-                                    } 
+                            Text(
+                                restaurant.name,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    color = Color.White.copy(0.25f),
+                                    shape = MaterialTheme.shapes.small
+                                ) {
+                                    Row(
+                                        Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Filled.Star, null, Modifier.size(14.dp), tint = Color.White)
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(
+                                            "${restaurant.rating}",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = Color.White
+                                        )
+                                    }
                                 }
-                                Text(restaurant.deliveryTime, style = MaterialTheme.typography.labelMedium, color = Color.White.copy(0.9f))
+                                Text(
+                                    restaurant.deliveryTime,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.White.copy(0.9f)
+                                )
                             }
                         }
                     }
@@ -256,12 +356,9 @@ private fun RestaurantCarouselM3(
             }
         }
 
-        // Индикаторы страниц
+        // Индикаторы
         Spacer(Modifier.height(10.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             repeat(restaurants.size) { index ->
                 val isSelected = pagerState.currentPage == index
                 val width by animateDpAsState(
@@ -283,6 +380,17 @@ private fun RestaurantCarouselM3(
             }
         }
     }
+}
+
+/** Смешивает два цвета с заданным весом (0 = base, 1 = blend). */
+private fun blendColors(base: Color, blend: Color, ratio: Float): Color {
+    val r = ratio.coerceIn(0f, 1f)
+    return Color(
+        red = base.red * (1 - r) + blend.red * r,
+        green = base.green * (1 - r) + blend.green * r,
+        blue = base.blue * (1 - r) + blend.blue * r,
+        alpha = 1f
+    )
 }
 
 private fun findCategoryListIndex(categories: List<com.vkusnyvybor.data.model.MenuCategory>, name: String): Int {
@@ -329,20 +437,22 @@ private fun SearchBar(query: String, onQueryChanged: (String) -> Unit, onClear: 
 @Composable
 private fun CategoryAnchors(categories: List<String>, onCategoryClick: (String) -> Unit) {
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(categories) { name -> 
+        items(categories) { name ->
             AssistChip(
-                onClick = { onCategoryClick(name) }, 
-                label = { Text("${getCategoryEmoji(name)} $name") }, 
-                shape = MaterialTheme.shapes.medium 
-            ) 
+                onClick = { onCategoryClick(name) },
+                label = { Text("${getCategoryEmoji(name)} $name") },
+                shape = MaterialTheme.shapes.medium
+            )
         }
     }
 }
 
 @Composable
 private fun CategoryHeader(name: String, emoji: String, accentColor: Color) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(emoji, fontSize = 22.sp); Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold); Spacer(Modifier.weight(1f)); Box(Modifier.weight(1f).height(1.dp).background(accentColor.copy(0.15f)))
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(emoji, fontSize = 24.sp)
+        Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Box(Modifier.weight(1f).height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
     }
 }
 
@@ -363,14 +473,14 @@ private fun MenuItemRow(item: MenuItem, restaurantColors: RestaurantColors, show
                         if (item.oldPrice != null) { Text("${item.oldPrice}\u20BD", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, textDecoration = TextDecoration.LineThrough) }
                     }
                     Surface(
-                        onClick = onAddClick, 
-                        color = MaterialTheme.colorScheme.primary, 
-                        shape = RoundedCornerShape(8.dp), 
+                        onClick = onAddClick,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.size(32.dp)
-                    ) { 
-                        Box(contentAlignment = Alignment.Center) { 
-                            Icon(Icons.Filled.Add, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp)) 
-                        } 
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.Add, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
+                        }
                     }
                 }
             }
@@ -388,7 +498,7 @@ private fun AddressBar() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = MaterialTheme.shapes.medium,
         tonalElevation = 1.dp
     ) {
@@ -402,20 +512,20 @@ private fun AddressBar() {
             Icon(
                 Icons.Filled.LocationOn,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     "В предприятии",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.7f)
                 )
                 Text(
                     "Выберите предприятие",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             FilledTonalButton(
