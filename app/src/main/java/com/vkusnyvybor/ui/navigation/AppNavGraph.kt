@@ -15,6 +15,7 @@ import com.vkusnyvybor.ui.screens.menuitem.MenuItemDetailScreen
 import com.vkusnyvybor.ui.screens.order.OrderDetailScreen
 import com.vkusnyvybor.ui.screens.profile.OrderHistoryScreen
 import com.vkusnyvybor.ui.screens.profile.ProfileScreen
+import com.vkusnyvybor.ui.screens.profile.ThemeConstructorScreen
 import com.vkusnyvybor.ui.screens.profile.ThemePickerScreen
 
 @Composable
@@ -26,26 +27,22 @@ fun AppNavGraph(navController: NavHostController, ordersStore: OrdersStore) {
         startDestination = Screen.Home.route,
         enterTransition = {
             fadeIn(tween(animationDuration)) + slideIntoContainer(
-                AnimatedContentTransitionScope.SlideDirection.Start,
-                tween(animationDuration)
+                AnimatedContentTransitionScope.SlideDirection.Start, tween(animationDuration)
             )
         },
         exitTransition = {
             fadeOut(tween(animationDuration)) + slideOutOfContainer(
-                AnimatedContentTransitionScope.SlideDirection.Start,
-                tween(animationDuration)
+                AnimatedContentTransitionScope.SlideDirection.Start, tween(animationDuration)
             )
         },
         popEnterTransition = {
             fadeIn(tween(animationDuration)) + slideIntoContainer(
-                AnimatedContentTransitionScope.SlideDirection.End,
-                tween(animationDuration)
+                AnimatedContentTransitionScope.SlideDirection.End, tween(animationDuration)
             )
         },
         popExitTransition = {
             fadeOut(tween(animationDuration)) + slideOutOfContainer(
-                AnimatedContentTransitionScope.SlideDirection.End,
-                tween(animationDuration)
+                AnimatedContentTransitionScope.SlideDirection.End, tween(animationDuration)
             )
         }
     ) {
@@ -54,8 +51,7 @@ fun AppNavGraph(navController: NavHostController, ordersStore: OrdersStore) {
             enterTransition = { fadeIn(tween(animationDuration)) },
             exitTransition = {
                 fadeOut(tween(animationDuration)) + slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Start,
-                    tween(animationDuration)
+                    AnimatedContentTransitionScope.SlideDirection.Start, tween(animationDuration)
                 )
             }
         ) {
@@ -88,7 +84,14 @@ fun AppNavGraph(navController: NavHostController, ordersStore: OrdersStore) {
         }
 
         composable(Screen.ThemePicker.route) {
-            ThemePickerScreen(onBackClick = { navController.popBackStack() })
+            ThemePickerScreen(
+                onBackClick = { navController.popBackStack() },
+                onConstructorClick = { navController.navigate(Screen.ThemeConstructor.route) }
+            )
+        }
+
+        composable(Screen.ThemeConstructor.route) {
+            ThemeConstructorScreen(onBackClick = { navController.popBackStack() })
         }
 
         composable(
@@ -112,9 +115,9 @@ fun AppNavGraph(navController: NavHostController, ordersStore: OrdersStore) {
             OrderDetailScreen(
                 orderId = entry.arguments?.getString("orderId") ?: return@composable,
                 onBackClick = { navController.popBackStack() },
-                onCartClick = { 
+                onCartClick = {
                     navController.popBackStack(Screen.Home.route, false)
-                    navController.navigate(Screen.Cart.route) 
+                    navController.navigate(Screen.Cart.route)
                 }
             )
         }
