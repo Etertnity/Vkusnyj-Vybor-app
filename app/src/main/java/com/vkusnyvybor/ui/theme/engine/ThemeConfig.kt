@@ -33,7 +33,15 @@ data class ThemeDecorations(
     val backgroundTexture: BackgroundTexture = BackgroundTexture.NONE,
     val cardStyle: CardStyle = CardStyle.ROUNDED,
     val dividerStyle: DividerStyle = DividerStyle.SIMPLE,
-    val themeLogo: @Composable (() -> Unit)? = null // Слот для программной отрисовки логотипа
+    val themeLogo: @Composable (() -> Unit)? = null, // Слот для программной отрисовки логотипа
+    // Пользовательские настройки (кастомные темы)
+    val customFontName: String? = null,         // имя шрифта Google Fonts (например "Roboto")
+    val customCornerRadius: Float? = null,      // радиус углов в dp; если null — используются пресеты cardStyle
+    val wallpaperPath: String? = null,          // абсолютный путь к файлу-обои в filesDir
+    val wallpaperOpacity: Float = 0.3f,         // 0..1
+    val wallpaperScale: Float = 1f,             // 0.5..3
+    val wallpaperOffsetX: Float = 0f,           // -1..1 (доля ширины)
+    val wallpaperOffsetY: Float = 0f            // -1..1 (доля высоты)
 )
 
 enum class BackgroundTexture { NONE, NOISE, GRID, SCANLINES, HEXAGONAL }
@@ -66,3 +74,37 @@ val UmbrellaShapes = Shapes(
 )
 
 val LocalThemeDecorations = compositionLocalOf { ThemeDecorations() }
+
+// ══════════════════════════════════════════════════════════════
+//  Пользовательские формы: строим Shapes из радиуса + стиля углов
+// ══════════════════════════════════════════════════════════════
+
+fun buildCustomShapes(radiusDp: Float, style: CardStyle): Shapes {
+    val r = radiusDp.coerceAtLeast(0f).dp
+    val small = (radiusDp * 0.5f).coerceAtLeast(0f).dp
+    val large = (radiusDp * 1.4f).coerceAtLeast(0f).dp
+    val xLarge = (radiusDp * 2f).coerceAtLeast(0f).dp
+    return when (style) {
+        CardStyle.CUT_CORNER -> Shapes(
+            extraSmall = CutCornerShape(topStart = small, bottomEnd = small),
+            small = CutCornerShape(topStart = small, bottomEnd = small),
+            medium = CutCornerShape(topStart = r, bottomEnd = r),
+            large = CutCornerShape(topStart = large, bottomEnd = large),
+            extraLarge = CutCornerShape(topStart = xLarge, bottomEnd = xLarge)
+        )
+        CardStyle.SHARP -> Shapes(
+            extraSmall = RoundedCornerShape(small),
+            small = RoundedCornerShape(small),
+            medium = RoundedCornerShape(r),
+            large = RoundedCornerShape(r),
+            extraLarge = RoundedCornerShape(r)
+        )
+        CardStyle.ROUNDED -> Shapes(
+            extraSmall = RoundedCornerShape(small),
+            small = RoundedCornerShape(small),
+            medium = RoundedCornerShape(r),
+            large = RoundedCornerShape(large),
+            extraLarge = RoundedCornerShape(xLarge)
+        )
+    }
+}

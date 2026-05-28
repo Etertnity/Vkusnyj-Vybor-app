@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.vkusnyvybor.data.repository.OrdersStore
+import com.vkusnyvybor.ui.screens.auth.AuthScreen
 import com.vkusnyvybor.ui.screens.cart.CartScreen
 import com.vkusnyvybor.ui.screens.home.HomeScreen
 import com.vkusnyvybor.ui.screens.menuitem.MenuItemDetailScreen
@@ -19,59 +20,58 @@ import com.vkusnyvybor.ui.screens.profile.ThemeConstructorScreen
 import com.vkusnyvybor.ui.screens.profile.ThemePickerScreen
 
 @Composable
-fun AppNavGraph(navController: NavHostController, ordersStore: OrdersStore) {
-    val animationDuration = 300
+fun AppNavGraph(
+    navController: NavHostController,
+    ordersStore: OrdersStore,
+    startDestination: String = Screen.Auth.route
+) {
+    val d = 300
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route,
-        enterTransition = {
-            fadeIn(tween(animationDuration)) + slideIntoContainer(
-                AnimatedContentTransitionScope.SlideDirection.Start, tween(animationDuration)
-            )
-        },
-        exitTransition = {
-            fadeOut(tween(animationDuration)) + slideOutOfContainer(
-                AnimatedContentTransitionScope.SlideDirection.Start, tween(animationDuration)
-            )
-        },
-        popEnterTransition = {
-            fadeIn(tween(animationDuration)) + slideIntoContainer(
-                AnimatedContentTransitionScope.SlideDirection.End, tween(animationDuration)
-            )
-        },
-        popExitTransition = {
-            fadeOut(tween(animationDuration)) + slideOutOfContainer(
-                AnimatedContentTransitionScope.SlideDirection.End, tween(animationDuration)
-            )
-        }
+        startDestination = startDestination,
+        enterTransition = { fadeIn(tween(d)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(d)) },
+        exitTransition = { fadeOut(tween(d)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(d)) },
+        popEnterTransition = { fadeIn(tween(d)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(d)) },
+        popExitTransition = { fadeOut(tween(d)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(d)) }
     ) {
         composable(
-            Screen.Home.route,
-            enterTransition = { fadeIn(tween(animationDuration)) },
-            exitTransition = {
-                fadeOut(tween(animationDuration)) + slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Start, tween(animationDuration)
-                )
-            }
+            Screen.Auth.route,
+            enterTransition = { fadeIn(tween(d)) },
+            exitTransition = { fadeOut(tween(d)) }
         ) {
+            AuthScreen(
+                onAuthorized = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Auth.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable(Screen.Home.route, enterTransition = { fadeIn(tween(d)) }, exitTransition = { fadeOut(tween(d)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(d)) }) {
             HomeScreen(
-                onItemClick = { restId, itemId -> navController.navigate(Screen.MenuItem.createRoute(restId, itemId)) },
+                onItemClick = { r, i -> navController.navigate(Screen.MenuItem.createRoute(r, i)) },
                 onCartClick = { navController.navigate(Screen.Cart.route) },
-                onOrderClick = { orderId -> navController.navigate(Screen.OrderDetail.createRoute(orderId)) },
+                onOrderClick = { navController.navigate(Screen.OrderDetail.createRoute(it)) },
                 onProfileClick = { navController.navigate(Screen.Profile.route) }
             )
         }
 
-        composable(Screen.Cart.route) {
-            CartScreen(onBackClick = { navController.popBackStack() })
-        }
+        composable(Screen.Cart.route) { CartScreen(onBackClick = { navController.popBackStack() }) }
 
         composable(Screen.Profile.route) {
             ProfileScreen(
                 onBackClick = { navController.popBackStack() },
                 onThemeClick = { navController.navigate(Screen.ThemePicker.route) },
-                onOrdersClick = { navController.navigate(Screen.OrderHistory.route) }
+                onOrdersClick = { navController.navigate(Screen.OrderHistory.route) },
+                onLogout = {
+                    navController.navigate(Screen.Auth.route) {
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 
@@ -79,27 +79,29 @@ fun AppNavGraph(navController: NavHostController, ordersStore: OrdersStore) {
             OrderHistoryScreen(
                 ordersStore = ordersStore,
                 onBackClick = { navController.popBackStack() },
-                onOrderClick = { orderId -> navController.navigate(Screen.OrderDetail.createRoute(orderId)) }
+                onOrderClick = { navController.navigate(Screen.OrderDetail.createRoute(it)) }
             )
         }
 
         composable(Screen.ThemePicker.route) {
             ThemePickerScreen(
                 onBackClick = { navController.popBackStack() },
-                onConstructorClick = { navController.navigate(Screen.ThemeConstructor.route) }
+                onConstructorClick = { navController.navigate(Screen.ThemeConstructor.createRoute()) },
+                onEditTheme = { themeId -> navController.navigate(Screen.ThemeConstructor.createRoute(themeId)) }
             )
         }
 
-        composable(Screen.ThemeConstructor.route) {
-            ThemeConstructorScreen(onBackClick = { navController.popBackStack() })
+        composable(
+            Screen.ThemeConstructor.route,
+            arguments = listOf(navArgument("editId") { type = NavType.StringType; defaultValue = "" })
+        ) { entry ->
+            val editId = entry.arguments?.getString("editId")?.takeIf { it.isNotEmpty() }
+            ThemeConstructorScreen(editThemeId = editId, onBackClick = { navController.popBackStack() })
         }
 
         composable(
             Screen.MenuItem.route,
-            arguments = listOf(
-                navArgument("restaurantId") { type = NavType.StringType },
-                navArgument("itemId") { type = NavType.StringType }
-            )
+            arguments = listOf(navArgument("restaurantId") { type = NavType.StringType }, navArgument("itemId") { type = NavType.StringType })
         ) { entry ->
             MenuItemDetailScreen(
                 restaurantId = entry.arguments?.getString("restaurantId") ?: return@composable,
@@ -115,10 +117,7 @@ fun AppNavGraph(navController: NavHostController, ordersStore: OrdersStore) {
             OrderDetailScreen(
                 orderId = entry.arguments?.getString("orderId") ?: return@composable,
                 onBackClick = { navController.popBackStack() },
-                onCartClick = {
-                    navController.popBackStack(Screen.Home.route, false)
-                    navController.navigate(Screen.Cart.route)
-                }
+                onCartClick = { navController.popBackStack(Screen.Home.route, false); navController.navigate(Screen.Cart.route) }
             )
         }
     }

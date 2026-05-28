@@ -28,10 +28,15 @@ import com.vkusnyvybor.ui.theme.engine.ThemeEngine
 @Composable
 fun ThemePickerScreen(
     onBackClick: () -> Unit = {},
-    onConstructorClick: () -> Unit = {}
+    onConstructorClick: () -> Unit = {},
+    onEditTheme: (String) -> Unit = {}
 ) {
     val currentThemeId by ThemeEngine.currentThemeId.collectAsState()
-    val themes = remember { ThemeEngine.availableThemes }
+    var themes by remember { mutableStateOf(ThemeEngine.availableThemes) }
+    var deleteDialog by remember { mutableStateOf<String?>(null) }
+
+    // Перечитываем список при смене текущей темы (в т.ч. после сохранения новой из конструктора)
+    LaunchedEffect(currentThemeId) { themes = ThemeEngine.availableThemes }
 
     Scaffold(
         topBar = {
@@ -47,16 +52,24 @@ fun ThemePickerScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text("Выберите тему для приложения", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+                Text("Выберите тему для приложения", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             items(themes, key = { it.id }) { theme ->
-                ThemeCard(theme = theme, isSelected = theme.id == currentThemeId, onSelect = { ThemeEngine.setTheme(theme.id) })
+                val isCustom = ThemeEngine.isCustomTheme(theme.id)
+                ThemeCard(
+                    theme = theme,
+                    isSelected = theme.id == currentThemeId,
+                    isCustom = isCustom,
+                    onSelect = { ThemeEngine.setTheme(theme.id) },
+                    onEdit = { onEditTheme(theme.id) },
+                    onDelete = { deleteDialog = theme.id }
+                )
             }
 
-            // Кнопка «Создать свою тему»
+            // Создать тему
             item {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
                 ElevatedCard(
                     onClick = onConstructorClick,
                     modifier = Modifier.fillMaxWidth(),
@@ -67,18 +80,12 @@ fun ThemePickerScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = CircleShape,
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Filled.Add, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(24.dp))
-                            }
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape, modifier = Modifier.size(48.dp)) {
+                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Add, null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(24.dp)) }
                         }
                         Column(Modifier.weight(1f)) {
                             Text("Создать свою тему", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text("Выбери цвета, формы, загрузи фото и спрайты", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            Text("Цвета, формы, шрифты, эффекты", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                         }
                         Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.outline)
                     }
@@ -86,44 +93,78 @@ fun ThemePickerScreen(
             }
         }
     }
+
+    // Диалог удаления
+    deleteDialog?.let { themeId ->
+        AlertDialog(
+            onDismissRequest = { deleteDialog = null },
+            icon = { Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Удалить тему?") },
+            text = { Text("Тема будет удалена. Это действие нельзя отменить.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    ThemeEngine.removeTheme(themeId)
+                    themes = ThemeEngine.availableThemes
+                    deleteDialog = null
+                }) { Text("Удалить", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { deleteDialog = null }) { Text("Отмена") } }
+        )
+    }
 }
 
 @Composable
-private fun ThemeCard(theme: ThemeConfig, isSelected: Boolean, onSelect: () -> Unit) {
+private fun ThemeCard(theme: ThemeConfig, isSelected: Boolean, isCustom: Boolean, onSelect: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     val borderColor by animateColorAsState(
         if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
         animationSpec = spring(), label = "border"
     )
     ElevatedCard(
         modifier = Modifier.fillMaxWidth()
-            .border(width = if (isSelected) 2.dp else 0.dp, color = borderColor, shape = MaterialTheme.shapes.large)
+            .border(if (isSelected) 2.dp else 0.dp, borderColor, MaterialTheme.shapes.large)
             .clickable { onSelect() },
         shape = MaterialTheme.shapes.large
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(theme.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(theme.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        if (isCustom) {
+                            Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = MaterialTheme.shapes.small) {
+                                Text("Своя", fontSize = MaterialTheme.typography.labelSmall.fontSize, color = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp))
+                            }
+                        }
+                    }
                     if (theme.description.isNotEmpty()) Text(theme.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if (isSelected) {
-                    Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape, modifier = Modifier.size(28.dp)) {
-                        Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Check, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp)) }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (isCustom) {
+                        IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Filled.Edit, "Редактировать", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                        }
+                        IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Filled.Delete, "Удалить", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    if (isSelected) {
+                        Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape, modifier = Modifier.size(28.dp)) {
+                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Check, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp)) }
+                        }
                     }
                 }
             }
             if (theme.previewColors.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     theme.previewColors.forEach { color ->
-                        Box(Modifier.size(32.dp).clip(CircleShape).background(color).border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape))
+                        Box(Modifier.size(28.dp).clip(CircleShape).background(color).border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape))
                     }
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (theme.useDynamicColor) ThemeBadge("Monet", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
-                if (theme.forceDark == true) ThemeBadge("Тёмная", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
                 if (theme.decorations.scanlineEffect) ThemeBadge("Эффекты", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer)
             }
         }

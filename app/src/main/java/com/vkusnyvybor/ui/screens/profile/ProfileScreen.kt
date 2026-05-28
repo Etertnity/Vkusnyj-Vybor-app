@@ -18,6 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vkusnyvybor.data.repository.AuthMode
 import com.vkusnyvybor.ui.theme.engine.LocalThemeDecorations
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,9 +28,12 @@ import com.vkusnyvybor.ui.theme.engine.LocalThemeDecorations
 fun ProfileScreen(
     onBackClick: () -> Unit = {},
     onThemeClick: () -> Unit = {},
-    onOrdersClick: () -> Unit = {}
+    onOrdersClick: () -> Unit = {},
+    onLogout: () -> Unit = {},
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val themeLogo = LocalThemeDecorations.current.themeLogo
+    val session by viewModel.session.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -83,12 +89,16 @@ fun ProfileScreen(
                 }
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Пользователь",
+                    session?.username ?: "Пользователь",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "+7 (999) 123-45-67",
+                    text = when (session?.mode) {
+                        AuthMode.TELEGRAM -> "Авторизован через Telegram"
+                        AuthMode.GUEST -> "Гостевой режим"
+                        null -> "+7 (999) 123-45-67"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -156,7 +166,10 @@ fun ProfileScreen(
             Spacer(Modifier.height(16.dp))
 
             OutlinedButton(
-                onClick = { },
+                onClick = {
+                    viewModel.logout()
+                    onLogout()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),

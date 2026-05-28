@@ -12,15 +12,26 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.VkusnyVybor"
+        android:usesCleartextTraffic="true"
         tools:targetApi="34">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.VkusnyVybor">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Возврат из браузера после Telegram-входа:
+                 сервис авторизации редиректит на vkusnyvybor://auth/callback?... -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="vkusnyvybor" android:host="auth" />
             </intent-filter>
         </activity>
     </application>

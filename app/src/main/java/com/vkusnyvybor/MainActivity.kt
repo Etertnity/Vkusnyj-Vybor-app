@@ -1,5 +1,7 @@
 package com.vkusnyvybor
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,8 +22,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
+import com.vkusnyvybor.data.repository.AuthMode
+import com.vkusnyvybor.data.repository.AuthSession
+import com.vkusnyvybor.data.repository.AuthSessionStore
 import com.vkusnyvybor.data.repository.OrdersStore
 import com.vkusnyvybor.ui.navigation.AppNavGraph
+import com.vkusnyvybor.ui.navigation.Screen
 import com.vkusnyvybor.ui.theme.VkusnyVyborTheme
 import com.vkusnyvybor.ui.theme.engine.LocalThemeDecorations
 import com.vkusnyvybor.ui.theme.engine.ThemeEngine
@@ -35,17 +41,66 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var ordersStore: OrdersStore
 
+    @Inject
+    lateinit var authSessionStore: AuthSessionStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         ThemeEngine.init(this)
 
+        // Перехватываем возврат из браузера после Telegram-входа
+        // (deep link vkusnyvybor://auth/callback?...). Делаем это ДО setContent,
+        // чтобы стартовый экран сразу стал Home, если сессия уже сохранена.
+        handleAuthDeepLink(intent)
+
         setContent {
             VkusnyVyborTheme(dynamicColor = true) {
                 SplashScreenWrapper {
-                    MainApp(ordersStore)
+                    val startDestination = if (authSessionStore.isAuthenticated()) {
+                        Screen.Home.route
+                    } else {
+                        Screen.Auth.route
+                    }
+                    MainApp(ordersStore, startDestination)
                 }
             }
+        }
+    }
+
+    /**
+     * Activity объявлена как singleTask, поэтому при возврате из браузера
+     * (приложение уже в памяти) система зовёт onNewIntent, а не пересоздаёт
+     * экран. Обновляем intent и обрабатываем ссылку — AuthViewModel подписан
+     * на стор сессии и сам переведёт на Home.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAuthDeepLink(intent)
+    }
+
+    /**
+     * Разбирает deep link вида
+     * `vkusnyvybor://auth/callback?success=true&user_hash=...&username=...`
+     * и сохраняет НАСТОЯЩИЕ user_hash и имя из ответа шлюза в локальную сессию.
+     */
+    private fun handleAuthDeepLink(intent: Intent?) {
+        val data: Uri = intent?.data ?: return
+        if (data.scheme != "vkusnyvybor" || data.host != "auth") return
+
+        val success = data.getQueryParameter("success")
+        val userHash = data.getQueryParameter("user_hash")
+        val username = data.getQueryParameter("username")
+
+        if (success == "true" && !userHash.isNullOrBlank()) {
+            authSessionStore.save(
+                AuthSession(
+                    userHash = userHash,
+                    username = username?.takeIf { it.isNotBlank() } ?: "Telegram-пользователь",
+                    mode = AuthMode.TELEGRAM
+                )
+            )
         }
     }
 }
@@ -94,12 +149,16 @@ fun SplashScreenWrapper(content: @Composable () -> Unit) {
 }
 
 @Composable
-fun MainApp(ordersStore: OrdersStore) {
+fun MainApp(ordersStore: OrdersStore, startDestination: String) {
     val navController = rememberNavController()
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        AppNavGraph(navController = navController, ordersStore = ordersStore)
+        AppNavGraph(
+            navController = navController,
+            ordersStore = ordersStore,
+            startDestination = startDestination
+        )
     }
 }

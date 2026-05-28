@@ -1,11 +1,16 @@
 package com.vkusnyvybor.ui.navigation
 
 sealed class Screen(val route: String) {
+    data object Auth : Screen("auth")
     data object Home : Screen("home")
     data object Cart : Screen("cart")
     data object Profile : Screen("profile")
     data object ThemePicker : Screen("theme_picker")
-    data object ThemeConstructor : Screen("theme_constructor")
+    data object ThemeConstructor : Screen("theme_constructor?editId={editId}") {
+        fun createRoute(editThemeId: String? = null) =
+            if (editThemeId != null) "theme_constructor?editId=$editThemeId"
+            else "theme_constructor"
+    }
     data object OrderHistory : Screen("order_history")
     data object MenuItem : Screen("menu_item/{restaurantId}/{itemId}") {
         fun createRoute(restaurantId: String, itemId: String) = "menu_item/$restaurantId/$itemId"
