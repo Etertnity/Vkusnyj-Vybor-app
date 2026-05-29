@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Выбор предприятия</title>
+    <style>
+        :root {
+            /* Цвета подставляются из Compose-темы (см. MapPickerWebView). */
+            --primary: __PRIMARY__;
+            --on-primary: __ON_PRIMARY__;
+            --bg: __BG__;
+            --surface: __SURFACE__;
+            --on-surface: __ON_SURFACE__;
+            --outline: __OUTLINE__;
+            --sheet-peek: 96px;
+            --sheet-expanded: 46vh;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--on-surface);
+            overflow: hidden;
+        }
+
+        /* Светлый фон-диагностика: если плитки НЕ грузятся (ключ/реферер/сеть),
+           область останется серой. Если станет чёрной — рисует WebGL-слой
+           (значит проблема в рендере, а не в загрузке плиток). */
+        #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #dfe3e8; }
+
+        /* Плавающий хинт о зуме */
+        .hint {
+            position: absolute;
+            top: 12px; left: 50%; transform: translateX(-50%);
+            background: var(--surface);
+            color: var(--on-surface);
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+            z-index: 5;
+            max-width: 90%;
+            text-align: center;
+            opacity: 0.95;
+        }
+
+        /* Кнопка геолокации */
+        .fab-geo {
+            position: absolute;
+            right: 14px;
+            bottom: calc(var(--sheet-peek) + 16px);
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: var(--surface);
+            color: var(--primary);
+            border: none;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.22);
+            font-size: 22px;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 6;
+            transition: bottom 0.28s ease;
+        }
+
+        /* Нижняя шторка со списком */
+        .sheet {
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            height: var(--sheet-expanded);
+            background: var(--surface);
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.18);
+            z-index: 7;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(calc(var(--sheet-expanded) - var(--sheet-peek)));
+            transition: transform 0.28s ease;
+        }
+        .sheet.expanded { transform: translateY(0); }
+
+        .sheet-handle {
+            padding: 10px 0 6px;
+            display: flex; flex-direction: column; align-items: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .sheet-handle .grip {
+            width: 40px; height: 4px; border-radius: 2px;
+            background: var(--outline);
+            opacity: 0.5;
+            margin-bottom: 8px;
+        }
+        .sheet-title {
+            font-size: 14px; font-weight: 600;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .sheet-count {
+            font-size: 12px; color: var(--outline); margin-top: 2px;
+        }
+
+        .list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 12px 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px;
+            border-radius: 14px;
+            margin-bottom: 8px;
+            background: var(--bg);
+            border: 1.5px solid transparent;
+            transition: border-color 0.15s, transform 0.1s;
+        }
+        .item:active { transform: scale(0.99); }
+        .item.selected { border-color: var(--primary); }
+
+        .item-dot {
+            width: 38px; height: 38px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0;
+            background: var(--primary); color: var(--on-primary);
+            font-weight: 700;
+        }
+        .item-body { flex: 1; min-width: 0; }
+        .item-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item-sub { font-size: 12px; color: var(--outline); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .item-dist { font-size: 12px; color: var(--primary); font-weight: 600; flex-shrink: 0; }
+
+        .empty { text-align: center; color: var(--outline); padding: 28px 12px; font-size: 14px; }
+
+        /* Карточка подтверждения */
+        .confirm-bar {
+            position: absolute;
+            left: 12px; right: 12px;
+            bottom: calc(var(--sheet-peek) + 14px);
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+            padding: 14px;
+            z-index: 8;
+            transform: translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s, bottom 0.28s ease;
+        }
+        .confirm-bar.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .confirm-name { font-size: 15px; font-weight: 700; }
+        .confirm-sub { font-size: 12px; color: var(--outline); margin-top: 2px; margin-bottom: 12px; }
+        .btn-confirm {
+            width: 100%;
+            background: var(--primary); color: var(--on-primary);
+            border: none; border-radius: 12px;
+            padding: 13px; font-size: 15px; font-weight: 700;
+        }
+        .btn-confirm:active { filter: brightness(0.95); }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="hint" id="hint">Приблизьте карту, чтобы увидеть отдельные заведения</div>
+
+    <button class="fab-geo" id="geoBtn" aria-label="Моё местоположение">📍</button>
+
+    <div class="confirm-bar" id="confirmBar">
+        <div class="confirm-name" id="confirmName">—</div>
+        <div class="confirm-sub" id="confirmSub">—</div>
+        <button class="btn-confirm" id="confirmBtn">Выбрать это предприятие</button>
+    </div>
+
+    <div class="sheet" id="sheet">
+        <div class="sheet-handle" id="sheetHandle">
+            <div class="grip"></div>
+            <div class="sheet-title" id="listTitle">🏢 Точки рядом</div>
+            <div class="sheet-count" id="listCount">Загрузка…</div>
+        </div>
+        <div class="list" id="list">
+            <div class="empty">Загрузка данных карты…</div>
+        </div>
+    </div>
+
+    <script>
+        // ── Конфиг (подставляется из Kotlin) ───────────────────────────────
+        var YANDEX_API_KEY = "__YANDEX_API_KEY__";
+        var MAP_BASE_URL = "__MAP_BASE_URL__";
+        var AUTH_TOKEN = "__AUTH_TOKEN__";   // user_hash из сессии (или пусто)
+        var AUTH_HEADER = "__AUTH_HEADER__"; // имя заголовка авторизации
+        var AUTH_SCHEME = "__AUTH_SCHEME__"; // префикс схемы (напр. Bearer) или пусто
+        var ENTERPRISE_ZOOM_THRESHOLD = 18;
+
+        // Заголовки для запросов к шлюзу: добавляем авторизацию, если есть токен.
+        function apiHeaders() {
+            var h = { 'Accept': 'application/json' };
+            if (AUTH_TOKEN) {
+                h[AUTH_HEADER] = AUTH_SCHEME ? (AUTH_SCHEME + ' ' + AUTH_TOKEN) : AUTH_TOKEN;
+            }
+            return h;
+        }
+
+        var FRANCHISE_COLORS = {
+            1: '#FFC72C',
+            2: '#E4002B',
+            3: '#2A5DD5'
+        };
+
+        var myMap = null;
+        var userLat = null, userLon = null;
+        var currentObjects = [];
+        var currentViewType = 'clusters';
+        var selectedObject = null;
+
+        // ── Диагностика: любые ошибки видны на экране (hint) и в logcat ──────
+        function diag(msg) {
+            try { document.getElementById('hint').textContent = msg; } catch (e) {}
+            try { console.error('[MAP] ' + msg); } catch (e) {}
+        }
+        window.onerror = function (message, src, line) {
+            diag('JS-ошибка: ' + message + ' @' + line);
+            return false;
+        };
+
+        // ── Динамическая загрузка Яндекс.Карт с ключом ──────────────────────
+        (function loadYandex() {
+            diag('Загрузка скрипта Яндекс.Карт…');
+            var s = document.createElement('script');
+            s.src = 'https://api-maps.yandex.ru/2.1/?apikey=' + encodeURIComponent(YANDEX_API_KEY) + '&lang=ru_RU';
+            s.onload = function () {
+                diag('Скрипт загружен, инициализация…');
+                if (typeof ymaps === 'undefined') {
+                    diag('⚠️ ymaps не определён — ключ отклонён Яндексом');
+                    return;
+                }
+                ymaps.ready(init);
+            };
+            s.onerror = function () {
+                diag('⚠️ Скрипт карты не загрузился (сеть/ключ/домен)');
+            };
+            document.head.appendChild(s);
+
+            // Сторожевой таймер: если за 10с карта не поднялась — сообщаем.
+            setTimeout(function () {
+                if (!myMap) diag('⚠️ Карта не запустилась за 10с (см. chrome://inspect → Console/Network)');
+            }, 10000);
+        })();
+
+        function init() {
+            diag('Создание карты…');
+            try {
+                myMap = new ymaps.Map('map', {
+                    center: [55.99, 37.20],
+                    zoom: 13,
+                    controls: ['zoomControl']
+                }, { suppressMapOpenBlock: true });
+            } catch (e) {
+                diag('⚠️ Ошибка создания карты: ' + e.message);
+                return;
+            }
+
+            // В WebView контейнер на момент создания нередко имеет нулевой/
+            // неверный размер — карта тогда не дорисовывает плитки. Принудительно
+            // пересчитываем размеры сразу и ещё раз после первого кадра.
+            try { myMap.container.fitToViewport(); } catch (e) {}
+            setTimeout(function () { try { myMap.container.fitToViewport(); } catch (e) {} }, 300);
+
+            myMap.events.add('boundschange', debounce(loadMapData, 300));
+            loadMapData();
+
+            // Через 2.5с проверяем, что именно нарисовал Яндекс внутри #map:
+            // плитки-картинки (растр) или canvas (WebGL/вектор), и загрузились ли
+            // плитки. Результат пишем в hint — это снимает все догадки.
+            setTimeout(checkTiles, 2500);
+        }
+
+        function checkTiles() {
+            var root = document.getElementById('map');
+            var imgs = root ? root.querySelectorAll('img') : [];
+            var canvases = root ? root.querySelectorAll('canvas') : [];
+            var loaded = 0;
+            Array.prototype.forEach.call(imgs, function (im) {
+                if (im.naturalWidth > 0) loaded++;
+            });
+            var ver = '';
+            try { ver = (ymaps.meta && ymaps.meta.version) ? (' v' + ymaps.meta.version) : ''; } catch (e) {}
+            diag('Плитки: ' + loaded + '/' + imgs.length +
+                 ' · canvas: ' + canvases.length + ver);
+        }
+
+        // ── Шторка ──────────────────────────────────────────────────────────
+        var sheet = document.getElementById('sheet');
+        document.getElementById('sheetHandle').addEventListener('click', function () {
+            sheet.classList.toggle('expanded');
+        });
+
+        // ── Геолокация ────────────────────────────────────────────────────
+        document.getElementById('geoBtn').addEventListener('click', function () {
+            if (!navigator.geolocation) return;
+            document.getElementById('hint').textContent = '📍 Определяем местоположение…';
+            navigator.geolocation.getCurrentPosition(function (pos) {
+                userLat = pos.coords.latitude;
+                userLon = pos.coords.longitude;
+                if (myMap) myMap.setCenter([userLat, userLon], 16);
+                loadMapData();
+            }, function () {
+                document.getElementById('hint').textContent = 'Не удалось определить местоположение';
+            }, { enableHighAccuracy: true, timeout: 10000 });
+        });
+
+        // ── Загрузка данных ─────────────────────────────────────────────────
+        function loadMapData() {
+            if (!myMap) return;
+            var zoom = myMap.getZoom();
+            var url = MAP_BASE_URL + '/api/map/data?zoom=' + zoom;
+            if (userLat !== null && userLon !== null) {
+                url += '&user_lat=' + userLat + '&user_lon=' + userLon;
+            }
+            diag('Запрос данных карты…');
+
+            // Таймаут, чтобы зависший запрос не оставлял экран молча чёрным.
+            var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            var timer = setTimeout(function () {
+                if (ctrl) ctrl.abort();
+                diag('⚠️ Таймаут запроса данных: ' + url);
+            }, 12000);
+
+            var opts = { headers: apiHeaders() };
+            if (ctrl) opts.signal = ctrl.signal;
+            fetch(url, opts)
+                .then(function (r) {
+                    clearTimeout(timer);
+                    if (!r.ok) {
+                        // Читаем тело ответа — там обычно причина (detail/WAF).
+                        return r.text().then(function (body) {
+                            var snippet = (body || '').replace(/\s+/g, ' ').slice(0, 160);
+                            throw new Error('HTTP ' + r.status + ' — ' + snippet);
+                        });
+                    }
+                    return r.json();
+                })
+                .then(function (data) {
+                    if (zoom >= ENTERPRISE_ZOOM_THRESHOLD && data.enterprises) {
+                        currentViewType = 'enterprises';
+                        currentObjects = data.enterprises || [];
+                        document.getElementById('listTitle').textContent = '🍔 Заведения рядом';
+                        drawEnterprises(currentObjects);
+                        renderList(currentObjects, 'enterprises');
+                    } else {
+                        currentViewType = 'clusters';
+                        currentObjects = data.clusters || [];
+                        document.getElementById('listTitle').textContent = '🏢 Точки рядом';
+                        drawClusters(currentObjects);
+                        renderList(currentObjects, 'clusters');
+                    }
+                    var n = currentObjects.length;
+                    document.getElementById('listCount').textContent =
+                        n + (currentViewType === 'clusters' ? ' кластеров' : ' заведений');
+                    document.getElementById('hint').textContent =
+                        currentViewType === 'clusters'
+                            ? 'Приблизьте карту, чтобы увидеть отдельные заведения'
+                            : 'Выберите конкретное заведение';
+                })
+                .catch(function (e) {
+                    clearTimeout(timer);
+                    console.error(e);
+                    diag('❌ Ошибка данных: ' + (e && e.message ? e.message : e));
+                    document.getElementById('list').innerHTML =
+                        '<div class="empty">❌ Не удалось загрузить данные карты</div>';
+                    document.getElementById('listCount').textContent = 'ошибка';
+                });
+        }
+
+        // ── Маркеры ─────────────────────────────────────────────────────────
+        function drawClusters(clusters) {
+            myMap.geoObjects.removeAll();
+            clusters.forEach(function (c) {
+                var pm = new ymaps.Placemark(
+                    [c.coordinates.latitude, c.coordinates.longitude],
+                    { hintContent: c.name, iconContent: String(c.enterprise_count) },
+                    { preset: 'islands#blueCircleIcon' }
+                );
+                pm.events.add('click', function () { selectObject(c.id); });
+                myMap.geoObjects.add(pm);
+            });
+        }
+
+        function drawEnterprises(enterprises) {
+            myMap.geoObjects.removeAll();
+            enterprises.forEach(function (e) {
+                var color = FRANCHISE_COLORS[e.franchise_id] || '#808080';
+                var pm = new ymaps.Placemark(
+                    [e.coordinates.latitude, e.coordinates.longitude],
+                    { hintContent: e.name },
+                    { preset: 'islands#circleIcon', iconColor: color }
+                );
+                pm.events.add('click', function () { selectObject(e.id); });
+                myMap.geoObjects.add(pm);
+            });
+        }
+
+        // ── Список ────────────────────────────────────────────────────────
+        function fmtDist(d) {
+            if (d == null) return '';
+            return d < 1000 ? Math.round(d) + ' м' : (d / 1000).toFixed(1) + ' км';
+        }
+
+        function renderList(objects, type) {
+            var list = document.getElementById('list');
+            if (!objects || objects.length === 0) {
+                list.innerHTML = '<div class="empty">Здесь пока нет точек</div>';
+                return;
+            }
+            var sorted = objects.slice();
+            if (userLat !== null) sorted.sort(function (a, b) {
+                return (a.distance || Infinity) - (b.distance || Infinity);
+            });
+
+            list.innerHTML = sorted.map(function (o) {
+                var dist = fmtDist(o.distance);
+                if (type === 'clusters') {
+                    return '<div class="item" data-id="' + o.id + '">' +
+                        '<div class="item-dot">' + o.enterprise_count + '</div>' +
+                        '<div class="item-body">' +
+                            '<div class="item-name">' + esc(o.name) + '</div>' +
+                            '<div class="item-sub">📍 ' + esc(o.address || 'Адрес фудкорта') + '</div>' +
+                        '</div>' +
+                        (dist ? '<div class="item-dist">' + dist + '</div>' : '') +
+                    '</div>';
+                } else {
+                    return '<div class="item" data-id="' + o.id + '">' +
+                        '<div class="item-dot">🍔</div>' +
+                        '<div class="item-body">' +
+                            '<div class="item-name">' + esc(o.name) + '</div>' +
+                            '<div class="item-sub">📍 ' + esc(o.address) + '</div>' +
+                        '</div>' +
+                        (dist ? '<div class="item-dist">' + dist + '</div>' : '') +
+                    '</div>';
+                }
+            }).join('');
+
+            Array.prototype.forEach.call(list.querySelectorAll('.item'), function (el) {
+                el.addEventListener('click', function () {
+                    selectObject(parseInt(el.getAttribute('data-id'), 10));
+                });
+            });
+        }
+
+        // ── Выбор ───────────────────────────────────────────────────────────
+        function selectObject(id) {
+            var obj = currentObjects.find(function (o) { return o.id === id; });
+            if (!obj) return;
+            obj.dataType = currentViewType; // фиксируем тип на момент клика
+            selectedObject = obj;
+
+            myMap.setCenter([obj.coordinates.latitude, obj.coordinates.longitude]);
+
+            // Подсветка в списке
+            Array.prototype.forEach.call(document.querySelectorAll('.item'), function (el) {
+                el.classList.toggle('selected', parseInt(el.getAttribute('data-id'), 10) === id);
+            });
+
+            var name = obj.name;
+            var sub;
+            if (currentViewType === 'clusters') {
+                sub = '🍔 заведений: ' + obj.enterprise_count;
+            } else {
+                sub = obj.franchise_name || 'Заведение';
+            }
+            document.getElementById('confirmName').textContent = name;
+            document.getElementById('confirmSub').textContent = sub;
+            document.getElementById('confirmBar').classList.add('show');
+        }
+
+        // ── Подтверждение → мост в Kotlin ───────────────────────────────────
+        document.getElementById('confirmBtn').addEventListener('click', function () {
+            if (!selectedObject) return;
+            var o = selectedObject;
+            var payload;
+            if (o.dataType === 'clusters') {
+                payload = {
+                    clusterId: o.id,
+                    clusterName: o.name,
+                    address: o.address || '',
+                    franchiseId: null,
+                    franchiseName: null,
+                    latitude: o.coordinates.latitude,
+                    longitude: o.coordinates.longitude
+                };
+            } else {
+                var fInfo = FRANCHISE_COLORS[o.franchise_id];
+                payload = {
+                    clusterId: o.cluster_id,
+                    clusterName: null,
+                    address: o.address || '',
+                    franchiseId: o.franchise_id,
+                    franchiseName: o.franchise_name || null,
+                    latitude: o.coordinates.latitude,
+                    longitude: o.coordinates.longitude
+                };
+            }
+            if (window.AndroidMapBridge && window.AndroidMapBridge.onLocationSelected) {
+                window.AndroidMapBridge.onLocationSelected(JSON.stringify(payload));
+            }
+        });
+
+        // ── Утилиты ─────────────────────────────────────────────────────────
+        function esc(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+        function debounce(fn, wait) {
+            var t;
+            return function () {
+                var ctx = this, a = arguments;
+                clearTimeout(t);
+                t = setTimeout(function () { fn.apply(ctx, a); }, wait);
+            };
+        }
+    </script>
+</body>
+</html>

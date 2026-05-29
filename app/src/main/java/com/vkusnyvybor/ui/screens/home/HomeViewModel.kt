@@ -9,6 +9,7 @@ import com.vkusnyvybor.data.model.Restaurant
 import com.vkusnyvybor.data.repository.FavoritesStore
 import com.vkusnyvybor.data.repository.MockRepository
 import com.vkusnyvybor.data.repository.OrdersStore
+import com.vkusnyvybor.data.repository.SelectedLocationStore
 import com.vkusnyvybor.ui.screens.cart.CartStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,11 +36,15 @@ class HomeViewModel @Inject constructor(
     private val repository: MockRepository,
     val cartStore: CartStore,
     val favoritesStore: FavoritesStore,
-    private val ordersStore: OrdersStore
+    private val ordersStore: OrdersStore,
+    selectedLocationStore: SelectedLocationStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState(isLoading = true))
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    /** Выбранная на карте локация (предприятие/кластер) — для адресной панели. */
+    val selectedLocation = selectedLocationStore.location
 
     init {
         ordersStore.seedIfEmpty(repository.getRecentOrders())

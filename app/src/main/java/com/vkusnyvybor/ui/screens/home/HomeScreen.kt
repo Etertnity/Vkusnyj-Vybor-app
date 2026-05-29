@@ -42,6 +42,7 @@ import com.vkusnyvybor.data.model.Order
 import com.vkusnyvybor.data.model.Restaurant
 import com.vkusnyvybor.data.model.RestaurantColors
 import com.vkusnyvybor.ui.components.ProductBottomSheet
+import com.vkusnyvybor.ui.localization.LocalStrings
 import com.vkusnyvybor.ui.theme.engine.LocalThemeDecorations
 import kotlinx.coroutines.launch
 
@@ -52,11 +53,13 @@ fun HomeScreen(
     onCartClick: () -> Unit = {},
     onOrderClick: (String) -> Unit = {},
     onProfileClick: () -> Unit = {},
+    onSelectLocationClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(LocalContext.current as ViewModelStoreOwner)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val cartItems by viewModel.cartStore.items.collectAsStateWithLifecycle()
     val favoriteIds by viewModel.favoritesStore.favoriteIds.collectAsStateWithLifecycle()
+    val selectedLocation by viewModel.selectedLocation.collectAsStateWithLifecycle()
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -88,7 +91,10 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                     // ── Адрес предприятия ────
-                    AddressBar()
+                    AddressBar(
+                        selected = selectedLocation,
+                        onClick = onSelectLocationClick
+                    )
                     Spacer(Modifier.height(8.dp))
                 }
             }
@@ -404,11 +410,12 @@ private fun findCategoryListIndex(categories: List<com.vkusnyvybor.data.model.Me
 
 @Composable
 private fun SearchBar(query: String, onQueryChanged: (String) -> Unit, onClear: () -> Unit, cartCount: Int, onCartClick: () -> Unit, onProfileClick: () -> Unit) {
+    val s = LocalStrings.current
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChanged,
-            placeholder = { Text("Найти блюдо...") },
+            placeholder = { Text(s.searchHint) },
             leadingIcon = { Icon(Icons.Filled.Search, null) },
             trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = onClear) { Icon(Icons.Filled.Close, null) } },
             singleLine = true,
@@ -428,7 +435,7 @@ private fun SearchBar(query: String, onQueryChanged: (String) -> Unit, onClear: 
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         ) {
-            Icon(Icons.Filled.Person, "Профиль", modifier = Modifier.size(22.dp))
+            Icon(Icons.Filled.Person, s.profileTitle, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -493,7 +500,14 @@ private fun MenuItemRow(item: MenuItem, restaurantColors: RestaurantColors, show
 // ══════════════════════════════════════════════════════════════
 
 @Composable
-private fun AddressBar() {
+private fun AddressBar(
+    selected: com.vkusnyvybor.data.repository.SelectedLocation? = null,
+    onClick: () -> Unit = {}
+) {
+    val s = LocalStrings.current
+    // Когда локация выбрана — показываем её название и адрес; иначе подсказку.
+    val title = selected?.displayTitle?.takeIf { it.isNotBlank() } ?: s.chooseRestaurant
+    val subtitle = selected?.address?.takeIf { it.isNotBlank() && it != title }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -517,24 +531,35 @@ private fun AddressBar() {
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "В предприятии",
+                    s.atRestaurant,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.7f)
                 )
                 Text(
-                    "Выберите предприятие",
+                    title,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
             FilledTonalButton(
-                onClick = { /* TODO: открыть выбор предприятия */ },
+                onClick = onClick,
                 shape = MaterialTheme.shapes.medium,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
-                    "Выбрать",
+                    if (selected != null) s.change else s.choose,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold
                 )

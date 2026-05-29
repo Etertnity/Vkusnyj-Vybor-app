@@ -26,6 +26,7 @@ import com.vkusnyvybor.data.repository.AuthMode
 import com.vkusnyvybor.data.repository.AuthSession
 import com.vkusnyvybor.data.repository.AuthSessionStore
 import com.vkusnyvybor.data.repository.OrdersStore
+import com.vkusnyvybor.ui.localization.LocalizationEngine
 import com.vkusnyvybor.ui.navigation.AppNavGraph
 import com.vkusnyvybor.ui.navigation.Screen
 import com.vkusnyvybor.ui.theme.VkusnyVyborTheme
@@ -48,6 +49,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         ThemeEngine.init(this)
+        LocalizationEngine.init(this)
 
         // Перехватываем возврат из браузера после Telegram-входа
         // (deep link vkusnyvybor://auth/callback?...). Делаем это ДО setContent,

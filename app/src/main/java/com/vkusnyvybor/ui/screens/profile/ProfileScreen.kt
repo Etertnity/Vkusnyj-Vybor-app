@@ -1,6 +1,7 @@
 package com.vkusnyvybor.ui.screens.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vkusnyvybor.data.repository.AuthMode
+import com.vkusnyvybor.ui.localization.AppLanguage
+import com.vkusnyvybor.ui.localization.LocalStrings
+import com.vkusnyvybor.ui.localization.LocalizationEngine
 import com.vkusnyvybor.ui.theme.engine.LocalThemeDecorations
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,14 +38,28 @@ fun ProfileScreen(
 ) {
     val themeLogo = LocalThemeDecorations.current.themeLogo
     val session by viewModel.session.collectAsStateWithLifecycle()
+    val s = LocalStrings.current
+    var showLanguageDialog by remember { mutableStateOf(false) }
+
+    if (showLanguageDialog) {
+        LanguageDialog(
+            current = LocalizationEngine.current,
+            title = s.chooseLanguage,
+            onSelect = {
+                LocalizationEngine.setLanguage(it)
+                showLanguageDialog = false
+            },
+            onDismiss = { showLanguageDialog = false }
+        )
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Профиль") },
+                title = { Text(s.profileTitle) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, s.back)
                     }
                 }
             )
@@ -95,8 +113,8 @@ fun ProfileScreen(
                 )
                 Text(
                     text = when (session?.mode) {
-                        AuthMode.TELEGRAM -> "Авторизован через Telegram"
-                        AuthMode.GUEST -> "Гостевой режим"
+                        AuthMode.TELEGRAM -> s.authorizedViaTelegram
+                        AuthMode.GUEST -> s.guestMode
                         null -> "+7 (999) 123-45-67"
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -106,17 +124,17 @@ fun ProfileScreen(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            SectionHeader("Заказы")
+            SectionHeader(s.sectionOrders)
             ProfileMenuItem(
                 icon = Icons.Outlined.Receipt,
-                title = "Мои заказы",
-                subtitle = "История и текущие заказы",
+                title = s.myOrders,
+                subtitle = s.myOrdersSub,
                 onClick = onOrdersClick
             )
             ProfileMenuItem(
                 icon = Icons.Outlined.LocationOn,
-                title = "Адреса",
-                subtitle = "Сохранённые предприятия",
+                title = s.addresses,
+                subtitle = s.addressesSub,
                 onClick = { }
             )
 
@@ -125,24 +143,24 @@ fun ProfileScreen(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
-            SectionHeader("Настройки")
+            SectionHeader(s.sectionSettings)
             ProfileMenuItem(
                 icon = Icons.Outlined.Palette,
-                title = "Тема оформления",
+                title = s.themeTitle,
                 subtitle = "Material You, Cyberpunk, Umbrella...",
                 onClick = onThemeClick
             )
             ProfileMenuItem(
                 icon = Icons.Outlined.Notifications,
-                title = "Уведомления",
-                subtitle = "Настроить оповещения",
+                title = s.notifications,
+                subtitle = s.notificationsSub,
                 onClick = { }
             )
             ProfileMenuItem(
                 icon = Icons.Outlined.Language,
-                title = "Язык",
-                subtitle = "Русский",
-                onClick = { }
+                title = s.language,
+                subtitle = LocalizationEngine.current.nativeName,
+                onClick = { showLanguageDialog = true }
             )
 
             HorizontalDivider(
@@ -150,16 +168,16 @@ fun ProfileScreen(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
-            SectionHeader("О приложении")
+            SectionHeader(s.sectionAbout)
             ProfileMenuItem(
                 icon = Icons.Outlined.Info,
-                title = "Версия",
+                title = s.version,
                 subtitle = "1.0.0",
                 onClick = { }
             )
             ProfileMenuItem(
                 icon = Icons.Outlined.Description,
-                title = "Пользовательское соглашение",
+                title = s.userAgreement,
                 onClick = { }
             )
 
@@ -180,7 +198,7 @@ fun ProfileScreen(
             ) {
                 Icon(Icons.AutoMirrored.Filled.ExitToApp, null, Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Выйти из аккаунта")
+                Text(s.logout)
             }
 
             Spacer(Modifier.height(32.dp))
@@ -250,4 +268,43 @@ private fun ProfileMenuItem(
             }
         }
     }
+}
+
+@Composable
+private fun LanguageDialog(
+    current: AppLanguage,
+    title: String,
+    onSelect: (AppLanguage) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                AppLanguage.entries.forEach { lang ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(lang) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        RadioButton(
+                            selected = lang == current,
+                            onClick = { onSelect(lang) }
+                        )
+                        Text(
+                            lang.nativeName,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("OK") }
+        }
+    )
 }

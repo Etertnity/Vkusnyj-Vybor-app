@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import com.vkusnyvybor.ui.localization.LocalStrings
 import org.json.JSONObject
 import org.json.JSONTokener
 
@@ -59,13 +60,15 @@ fun TelegramAuthWebView(
 
     BackHandler { onClose() }
 
+    val s = LocalStrings.current
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Вход через Telegram") },
+                title = { Text(s.telegramLoginTitle) },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
-                        Icon(Icons.Filled.Close, contentDescription = "Закрыть")
+                        Icon(Icons.Filled.Close, contentDescription = s.close)
                     }
                 }
             )

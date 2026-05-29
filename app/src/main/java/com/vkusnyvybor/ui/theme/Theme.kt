@@ -25,6 +25,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.vkusnyvybor.ui.localization.LocalStrings
+import com.vkusnyvybor.ui.localization.LocalizationEngine
 import com.vkusnyvybor.ui.theme.engine.LocalThemeDecorations
 import com.vkusnyvybor.ui.theme.engine.ThemeEngine
 import java.io.File
@@ -68,7 +70,14 @@ fun VkusnyVyborTheme(
         }
     }
 
-    CompositionLocalProvider(LocalThemeDecorations provides themeConfig.decorations) {
+    // Чтение current внутри композиции => смена языка мгновенно рекомпозит всё,
+    // что читает LocalStrings.
+    val strings = LocalizationEngine.strings
+
+    CompositionLocalProvider(
+        LocalThemeDecorations provides themeConfig.decorations,
+        LocalStrings provides strings
+    ) {
         MaterialTheme(colorScheme = colorScheme, typography = typography, shapes = shapes) {
             WallpaperHost(
                 path = themeConfig.decorations.wallpaperPath,

@@ -3,6 +3,7 @@ package com.vkusnyvybor.ui.navigation
 sealed class Screen(val route: String) {
     data object Auth : Screen("auth")
     data object Home : Screen("home")
+    data object Map : Screen("map")
     data object Cart : Screen("cart")
     data object Profile : Screen("profile")
     data object ThemePicker : Screen("theme_picker")

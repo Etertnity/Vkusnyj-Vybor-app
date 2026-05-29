@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vkusnyvybor.R
+import com.vkusnyvybor.ui.localization.LocalStrings
 import com.vkusnyvybor.ui.theme.engine.BackgroundTexture
 import com.vkusnyvybor.ui.theme.engine.BiohazardStripe
 import com.vkusnyvybor.ui.theme.engine.DividerStyle
@@ -57,6 +58,7 @@ fun AuthScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val decorations = LocalThemeDecorations.current
+    val s = LocalStrings.current
 
     // Срабатывает, когда сессия успешно сохранилась.
     LaunchedEffect(state.authorized) {
@@ -101,7 +103,7 @@ fun AuthScreen(
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    text = "Войдите через Telegram, чтобы продолжить",
+                    text = s.authSubtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -124,7 +126,7 @@ fun AuthScreen(
 
                 // ── Подпись ─────────────────────────────────────────
                 Text(
-                    text = "Защищено протоколом OpenID Connect • Telegram",
+                    text = s.securedBy,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline,
                     textAlign = TextAlign.Center
@@ -226,6 +228,7 @@ private fun AuthCard(
     onConfirmReturn: () -> Unit,
     onGuestClick: () -> Unit
 ) {
+    val s = LocalStrings.current
     val primary = MaterialTheme.colorScheme.primary
     // Glow-обводка карточки — тот же приём, что и на карточках главного экрана.
     val glowModifier = if (glow) {
@@ -274,12 +277,12 @@ private fun AuthCard(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                     Spacer(Modifier.width(12.dp))
-                    Text("Связываемся со шлюзом…")
+                    Text(s.connectingGateway)
                 } else {
                     Icon(Icons.Filled.Send, null, Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        text = "Войти через Telegram",
+                        text = s.loginWithTelegram,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -311,7 +314,7 @@ private fun AuthCard(
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = "Завершите вход в браузере и вернитесь сюда.",
+                                text = s.finishInBrowser,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -325,7 +328,7 @@ private fun AuthCard(
                     ) {
                         Icon(Icons.Filled.Check, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Я подтвердил вход")
+                        Text(s.confirmedLogin)
                     }
                 }
             }
@@ -339,7 +342,7 @@ private fun AuthCard(
             ) {
                 ThemedDivider(style = dividerStyle, modifier = Modifier.weight(1f))
                 Text(
-                    text = "  или  ",
+                    text = "  ${s.orLabel}  ",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -356,7 +359,7 @@ private fun AuthCard(
             ) {
                 Icon(Icons.Outlined.AccountCircle, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Продолжить как гость")
+                Text(s.continueAsGuest)
             }
         }
     }

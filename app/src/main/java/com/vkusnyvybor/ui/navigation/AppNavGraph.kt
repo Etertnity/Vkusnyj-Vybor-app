@@ -12,6 +12,7 @@ import com.vkusnyvybor.data.repository.OrdersStore
 import com.vkusnyvybor.ui.screens.auth.AuthScreen
 import com.vkusnyvybor.ui.screens.cart.CartScreen
 import com.vkusnyvybor.ui.screens.home.HomeScreen
+import com.vkusnyvybor.ui.screens.map.MapPickerScreen
 import com.vkusnyvybor.ui.screens.menuitem.MenuItemDetailScreen
 import com.vkusnyvybor.ui.screens.order.OrderDetailScreen
 import com.vkusnyvybor.ui.screens.profile.OrderHistoryScreen
@@ -55,8 +56,13 @@ fun AppNavGraph(
                 onItemClick = { r, i -> navController.navigate(Screen.MenuItem.createRoute(r, i)) },
                 onCartClick = { navController.navigate(Screen.Cart.route) },
                 onOrderClick = { navController.navigate(Screen.OrderDetail.createRoute(it)) },
-                onProfileClick = { navController.navigate(Screen.Profile.route) }
+                onProfileClick = { navController.navigate(Screen.Profile.route) },
+                onSelectLocationClick = { navController.navigate(Screen.Map.route) }
             )
+        }
+
+        composable(Screen.Map.route) {
+            MapPickerScreen(onClose = { navController.popBackStack() })
         }
 
         composable(Screen.Cart.route) { CartScreen(onBackClick = { navController.popBackStack() }) }
